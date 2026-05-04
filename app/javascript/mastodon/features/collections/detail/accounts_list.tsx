@@ -3,6 +3,9 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 
 import { PendingBadge } from '@/mastodon/components/badge';
+import { useAccountHandle } from '@/mastodon/components/display_name/default';
+import { useAccount } from '@/mastodon/hooks/useAccount';
+import { useCopyToClipboard } from '@/mastodon/hooks/useCopyToClipboard';
 import VisibilityOffIcon from '@/material-icons/400-24px/visibility_off.svg?react';
 import type {
   ApiCollectionJSON,
@@ -21,7 +24,7 @@ import {
 } from 'mastodon/components/scrollable_list/components';
 import type { TruncatedListItemInfo } from 'mastodon/components/truncated_list';
 import { TruncatedListItems } from 'mastodon/components/truncated_list';
-import { me } from 'mastodon/initial_state';
+import { domain, me } from 'mastodon/initial_state';
 import type { Account } from 'mastodon/models/account';
 import { createAppSelector, useAppSelector } from 'mastodon/store';
 
@@ -98,6 +101,27 @@ const getCollectionItems = createAppSelector(
     ),
 );
 
+const CopyHandleButton: React.FC<{ accountId?: string }> = ({ accountId }) => {
+  const account = useAccount(accountId);
+  const handle = useAccountHandle(account, domain);
+
+  const { copyToClipboard, wasCopied } = useCopyToClipboard(handle);
+
+  if (!accountId || !handle) {
+    return null;
+  }
+
+  return (
+    <Button secondary compact onClick={copyToClipboard}>
+      {wasCopied ? (
+        <FormattedMessage id='copypaste.copied' defaultMessage='Copied' />
+      ) : (
+        <FormattedMessage id='account.name.copy' defaultMessage='Copy handle' />
+      )}
+    </Button>
+  );
+};
+
 export const CollectionAccountsList: React.FC<{
   collection: ApiCollectionJSON;
 }> = ({ collection }) => {
@@ -138,6 +162,10 @@ export const CollectionAccountsList: React.FC<{
 
   const renderAccountItemButton = useCallback(
     ({ relationship, accountId }: RenderButtonOptions) => {
+      if (!me) {
+        return <CopyHandleButton accountId={accountId} />;
+      }
+
       // When viewing your own collection, only show the Follow button
       // for accounts you're not following anymore.
       const withoutButton =

@@ -7,10 +7,10 @@ import classNames from 'classnames';
 
 import Overlay from 'react-overlays/esm/Overlay';
 
-import { showAlert } from '@/mastodon/actions/alerts';
 import { useAccount } from '@/mastodon/hooks/useAccount';
+import { useCopyToClipboard } from '@/mastodon/hooks/useCopyToClipboard';
 import { useRelationship } from '@/mastodon/hooks/useRelationship';
-import { useAppDispatch, useAppSelector } from '@/mastodon/store';
+import { useAppSelector } from '@/mastodon/store';
 import AtIcon from '@/material-icons/400-24px/alternate_email.svg?react';
 import ContentCopyIcon from '@/material-icons/400-24px/content_copy.svg?react';
 import HelpIcon from '@/material-icons/400-24px/help.svg?react';
@@ -90,16 +90,7 @@ const AccountNameHelp: FC<{
 
   const handle = `@${username}@${domain}`;
 
-  const dispatch = useAppDispatch();
-  const [copied, setCopied] = useState(false);
-  const handleCopy = useCallback(() => {
-    void navigator.clipboard.writeText(handle);
-    setCopied(true);
-    dispatch(showAlert({ message: messages.copied }));
-    setTimeout(() => {
-      setCopied(false);
-    }, 700);
-  }, [handle, dispatch]);
+  const { wasCopied, copyToClipboard } = useCopyToClipboard(handle);
 
   return (
     <>
@@ -182,15 +173,15 @@ const AccountNameHelp: FC<{
               tagName='p'
             />
 
-            <Button onClick={handleCopy} className={classes.handleCopy}>
+            <Button onClick={copyToClipboard} className={classes.handleCopy}>
               <Icon id='copy' icon={ContentCopyIcon} />
-              {!copied && (
+              {!wasCopied && (
                 <FormattedMessage
                   id='account.name.copy'
                   defaultMessage='Copy handle'
                 />
               )}
-              {copied && (
+              {wasCopied && (
                 <FormattedMessage
                   id='copypaste.copied'
                   defaultMessage='Copied'
