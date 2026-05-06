@@ -1,5 +1,7 @@
 import { Semaphore } from 'async-mutex';
 
+import { isDevelopment } from '../utils/environment';
+
 import type { LocaleData } from './global_locale';
 import { isLocaleLoaded, setLocale } from './global_locale';
 
@@ -11,7 +13,10 @@ const localeFiles = import.meta.glob<{ default: LocaleData['messages'] }>([
 
 export async function loadLocale() {
   // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- we want to match empty strings
-  const locale = document.querySelector<HTMLElement>('html')?.lang || 'en';
+  let locale = document.querySelector<HTMLElement>('html')?.lang || 'en';
+  if (window.location.hash === '#lang-xx' && isDevelopment()) {
+    locale = 'xx';
+  }
 
   // We use a Semaphore here so only one thing can try to load the locales at
   // the same time. If one tries to do it while its in progress, it will wait
