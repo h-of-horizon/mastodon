@@ -217,3 +217,58 @@ export function htmlStringToComponents<Arg extends Record<string, unknown>>(
 
   return rootChildren;
 }
+
+interface UpdateHtmlTreeOptions {
+  clone?: boolean;
+  onNode?: (node: Node) => Node | null;
+  onText?: (text: string) => (Node | string)[];
+}
+
+/**
+ * Updates a node tree with callbacks, either in-place or by cloning.
+ */
+export function updateHtmlTree(
+  root: Element,
+  { clone, onNode, onText }: UpdateHtmlTreeOptions,
+) {
+  const rootNode = clone ? root.cloneNode(true) : root;
+  const queue: Node[] = [rootNode];
+
+  while (queue.length > 0) {
+    const node = queue.shift();
+    if (!node) {
+      break;
+    }
+
+    const parentNode = node.parentNode;
+
+    switch (node.nodeType) {
+      case Node.DOCUMENT_FRAGMENT_NODE:
+      case Node.ELEMENT_NODE: {
+        for (const child of node.childNodes) {
+          queue.push(child);
+        }
+
+        if (node.nodeType === Node.ELEMENT_NODE && onNode && parentNode) {
+          const newNode = onNode(node);
+          if (!newNode) {
+            parentNode.removeChild(node);
+          } else if (newNode !== node) {
+            parentNode.replaceChild(newNode, node);
+          }
+        }
+        break;
+      }
+
+      case Node.TEXT_NODE: {
+        if (onText && node.textContent !== null && parentNode) {
+          const newNodes = onText(node.textContent);
+          parentNode.replaceChildren(...newNodes);
+        }
+        break;
+      }
+    }
+  }
+
+  return rootNode;
+}

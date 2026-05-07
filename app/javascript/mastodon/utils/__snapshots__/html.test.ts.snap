@@ -15,7 +15,7 @@ exports[`html > htmlStringToComponents > copies attributes to props 1`] = `
 exports[`html > htmlStringToComponents > handles nested elements 1`] = `
 [
   <p>
-    lorem 
+    lorem
     <strong>
       ipsum
     </strong>
@@ -26,11 +26,11 @@ exports[`html > htmlStringToComponents > handles nested elements 1`] = `
 exports[`html > htmlStringToComponents > ignores empty text nodes 1`] = `
 [
   <p>
-       
+
     <span>
       lorem     ipsum
     </span>
-       
+
   </p>,
 ]
 `;
@@ -38,8 +38,8 @@ exports[`html > htmlStringToComponents > ignores empty text nodes 1`] = `
 exports[`html > htmlStringToComponents > respects allowedTags option 1`] = `
 [
   <p>
-    lorem 
-     
+    lorem
+
     <em>
       dolor
     </em>
