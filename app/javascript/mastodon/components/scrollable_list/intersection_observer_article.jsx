@@ -1,23 +1,19 @@
 import PropTypes from 'prop-types';
 import { cloneElement, Component } from 'react';
 
-import getRectFromEntry from '../../features/ui/util/get_rect_from_entry';
 import scheduleIdleTask from '../../features/ui/util/schedule_idle_task';
 import { Article } from './components';
 
 // Diff these props in the "unrendered" state
-const updateOnPropsForUnrendered = ['id', 'index', 'listLength', 'cachedHeight'];
+const updateOnPropsForUnrendered = ['id', 'index', 'listLength'];
 
-export default class IntersectionObserverArticle extends Component {
+export class IntersectionObserverArticle extends Component {
 
   static propTypes = {
     intersectionObserverWrapper: PropTypes.object.isRequired,
     id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     index: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     listLength: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    saveHeightKey: PropTypes.string,
-    cachedHeight: PropTypes.number,
-    onHeightChange: PropTypes.func,
     children: PropTypes.node,
   };
 
@@ -26,8 +22,8 @@ export default class IntersectionObserverArticle extends Component {
   };
 
   shouldComponentUpdate (nextProps, nextState) {
-    const isUnrendered = !this.state.isIntersecting && (this.state.isHidden || this.props.cachedHeight);
-    const willBeUnrendered = !nextState.isIntersecting && (nextState.isHidden || nextProps.cachedHeight);
+    const isUnrendered = !this.state.isIntersecting && (this.state.isHidden);
+    const willBeUnrendered = !nextState.isIntersecting && (nextState.isHidden);
     if (!!isUnrendered !== !!willBeUnrendered) {
       // If we're going from rendered to unrendered (or vice versa) then update
       return true;
@@ -77,14 +73,7 @@ export default class IntersectionObserverArticle extends Component {
   };
 
   calculateHeight = () => {
-    const { onHeightChange, saveHeightKey, id } = this.props;
-    // save the height of the fully-rendered element (this is expensive
-    // on Chrome, where we need to fall back to getBoundingClientRect)
-    this.height = getRectFromEntry(this.entry).height;
-
-    if (onHeightChange && saveHeightKey) {
-      onHeightChange(saveHeightKey, id, this.height);
-    }
+    this.height = this.entry.boundingClientRect.height;
   };
 
   hideIfNotIntersecting = () => {
@@ -104,16 +93,16 @@ export default class IntersectionObserverArticle extends Component {
   };
 
   render () {
-    const { children, id, index, listLength, cachedHeight } = this.props;
+    const { children, id, index, listLength } = this.props;
     const { isIntersecting, isHidden } = this.state;
 
-    if (!isIntersecting && (isHidden || cachedHeight)) {
+    if (!isIntersecting && isHidden) {
       return (
         <Article
           ref={this.handleRef}
           aria-posinset={index + 1}
           aria-setsize={listLength}
-          style={{ height: `${this.height || cachedHeight}px`, opacity: 0, overflow: 'hidden' }}
+          style={{ height: `${this.height}px`, opacity: 0, overflow: 'hidden' }}
           data-id={id}
         >
           {children && cloneElement(children, { hidden: true })}

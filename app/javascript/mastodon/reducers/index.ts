@@ -13,7 +13,6 @@ import { contextsReducer } from './contexts';
 import conversations from './conversations';
 import { dropdownMenuReducer } from './dropdown_menu';
 import filters from './filters';
-import height_cache from './height_cache';
 import history from './history';
 import { listsReducer } from './lists';
 import { markersReducer } from './markers';
@@ -65,7 +64,6 @@ const reducers = {
   media_attachments,
   notifications,
   notificationGroups: notificationGroupsReducer,
-  height_cache,
   lists: listsReducer,
   followedTags: followedTagsReducer,
   filters,

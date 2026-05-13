@@ -8,8 +8,6 @@ import { Redirect, Route, withRouter } from 'react-router-dom';
 
 import { connect } from 'react-redux';
 
-import { debounce } from 'lodash';
-
 import { scrollRight } from '../../scroll';
 import { focusApp, unfocusApp, changeLayout } from 'mastodon/actions/app';
 import { synchronouslySubmitMarkers, submitMarkers, fetchMarkers } from 'mastodon/actions/markers';
@@ -26,7 +24,6 @@ import { WithRouterPropTypes } from 'mastodon/utils/react_router';
 import { checkAnnualReport } from '@/mastodon/reducers/slices/annual_report';
 
 import { uploadCompose, resetCompose, changeComposeSpoilerness } from '../../actions/compose';
-import { clearHeight } from '../../actions/height_cache';
 import { fetchServer, fetchServerTranslationLanguages } from '../../actions/server';
 import { expandHomeTimeline } from '../../actions/timelines';
 import { initialState, me, owner, singleUserMode, trendsEnabled, landingPage, localLiveFeedAccess, disableHoverCards } from '../../initial_state';
@@ -396,20 +393,11 @@ class UI extends PureComponent {
     }
   };
 
-  handleLayoutChange = debounce(() => {
-    this.props.dispatch(clearHeight()); // The cached heights are no longer accurate, invalidate
-  }, 500, {
-    trailing: true,
-  });
-
   handleResize = () => {
     const layout = layoutFromWindow();
 
     if (layout !== this.props.layout) {
-      this.handleLayoutChange.cancel();
       this.props.dispatch(changeLayout({ layout }));
-    } else {
-      this.handleLayoutChange();
     }
   };
 

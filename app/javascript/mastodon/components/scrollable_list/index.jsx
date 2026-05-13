@@ -11,14 +11,13 @@ import { throttle } from 'lodash';
 
 import { ScrollContainer } from 'mastodon/containers/scroll_container';
 
-import IntersectionObserverArticleContainer from '../../containers/intersection_observer_article_container';
 import { attachFullscreenListener, detachFullscreenListener, isFullscreen } from '../../features/ui/util/fullscreen';
 import IntersectionObserverWrapper from '../../features/ui/util/intersection_observer_wrapper';
 
 import { LoadMore } from '../load_more';
 import { LoadPending } from '../load_pending';
-import { LoadingIndicator } from '../loading_indicator';
 import { Scrollable, ItemList } from './components';
+import { IntersectionObserverArticle } from './intersection_observer_article';
 
 const MOUSE_IDLE_DELAY = 300;
 
@@ -39,15 +38,17 @@ const mapStateToProps = (state, { scrollKey }) => {
 const IOArticleContainerWrapper = ({id, index, listLength, intersectionObserverWrapper, trackScroll, scrollKey, children}) => {
   const location = useLocation();
 
-  return (<IntersectionObserverArticleContainer
-    id={id}
-    index={index}
-    listLength={listLength}
-    intersectionObserverWrapper={intersectionObserverWrapper}
-    saveHeightKey={trackScroll ? `${location.key}:${scrollKey}` : null}
-  >
-    {children}
-  </IntersectionObserverArticleContainer>);
+  return (
+    <IntersectionObserverArticle
+      id={id}
+      index={index}
+      listLength={listLength}
+      intersectionObserverWrapper={intersectionObserverWrapper}
+      saveHeightKey={trackScroll ? `${location.key}:${scrollKey}` : null}
+    >
+      {children}
+    </IntersectionObserverArticle>
+  );
 };
 
 IOArticleContainerWrapper.propTypes =  {
