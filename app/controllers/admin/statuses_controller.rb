@@ -62,7 +62,17 @@ module Admin
     end
 
     def set_statuses
-      @statuses = Admin::StatusFilter.new(@account, filter_params).results.preload(*preload_columns, reblog: [:account, *preload_columns]).page(params[:page]).per(PER_PAGE)
+      # 👇 아래 코드를 찾아 수정합니다.
+      # 기존 코드: 
+      # @statuses = Admin::StatusFilter.new(@account, filter_params).results.preload(*preload_columns, reblog: [:account, *preload_columns]).page(params[:page]).per(PER_PAGE)
+      
+      # 수정된 코드 (.unscope(where: :visibility) 가 추가되었습니다):
+      @statuses = Admin::StatusFilter.new(@account, filter_params)
+                    .results
+                    .unscope(where: :visibility) # <--- 핵심: DM 숨김 필터를 해제합니다.
+                    .preload(*preload_columns, reblog: [:account, *preload_columns])
+                    .page(params[:page])
+                    .per(PER_PAGE)
     end
 
     def preload_columns

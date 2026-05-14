@@ -402,6 +402,9 @@ class Status extends ImmutablePureComponent {
       return null;
     }
 
+    // 👇 [추가] 이 글이 DM인지 확인하는 변수를 만듭니다.
+    const isDirect = status.get('visibility') === 'direct';
+
     const handlers = this.props.muted ? {} : {
       reply: this.handleHotkeyReply,
       favourite: this.handleHotkeyFavourite,
@@ -603,6 +606,7 @@ class Status extends ImmutablePureComponent {
                 'status--is-quote': isQuotedPost,
                 'status--has-quote': !!status.get('quote'),
                 'status--highlighted-entry': this.props.shouldHighlightOnMount,
+                'status-direct': isDirect, // <--- 🌟 여기에 추가해 주세요! 🌟
               })
             }
             data-id={status.get('id')}

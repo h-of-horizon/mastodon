@@ -164,19 +164,48 @@ class Notification extends ImmutablePureComponent {
   }
 
   renderMention (notification) {
-    return (
+    const { hidden, getScrollPosition, updateScrollBottom, cachedMediaWidth, cacheMediaWidth, unread } = this.props;
+    
+    // 👇 1. 이 알림(멘션)이 DM인지 확인합니다.
+    const isDirect = notification.getIn(['status', 'visibility']) === 'direct';
+
+    // 👇 2. DM일 경우에만 표시할 배지를 만듭니다.
+    let dmBadge = null;
+    if (isDirect) {
+      dmBadge = (
+        <div className="notification__dm-badge">
+          다이렉트 메시지(DM)
+        </div>
+      );
+    }
+
+    // 👇 3. 기존에 렌더링하던 멘션(게시글) 본문입니다.
+    const mentionContent = (
       <StatusQuoteManager
         id={notification.get('status')}
         withDismiss
-        hidden={this.props.hidden}
+        hidden={hidden}
         contextType='notifications'
-        getScrollPosition={this.props.getScrollPosition}
-        updateScrollBottom={this.props.updateScrollBottom}
-        cachedMediaWidth={this.props.cachedMediaWidth}
-        cacheMediaWidth={this.props.cacheMediaWidth}
-        unread={this.props.unread}
+        getScrollPosition={getScrollPosition}
+        updateScrollBottom={updateScrollBottom}
+        cachedMediaWidth={cachedMediaWidth}
+        cacheMediaWidth={cacheMediaWidth}
+        unread={unread}
       />
     );
+
+    // 👇 4. DM이라면 우리가 만든 배지와 배경색(className)으로 감싸서 보여줍니다.
+    if (isDirect) {
+      return (
+        <div className={classNames('notification', 'notification-mention', 'notification-is-direct', { unread })}>
+          {dmBadge}
+          {mentionContent}
+        </div>
+      );
+    }
+
+    // DM이 아니라면 일반 멘션과 동일하게 보여줍니다.
+    return mentionContent;
   }
 
   renderFavourite (notification, link) {

@@ -173,6 +173,18 @@ class ComposeForm extends ImmutablePureComponent {
     this.props.onChangeSpoilerText(e.target.value);
   };
 
+  // 👇 [추가 1] 셀렉트 박스 선택 시 호출되는 함수를 추가합니다.
+  handleCWCategoryChange = (e) => {
+    const value = e.target.value;
+    if (value === '기타') {
+      // 기타를 누르면 입력창을 비워 직접 입력할 수 있게 합니다.
+      this.props.onChangeSpoilerText('');
+    } else {
+      // 사전에 정의된 항목을 누르면 해당 텍스트를 경고 문구로 설정합니다.
+      this.props.onChangeSpoilerText(value);
+    }
+  };
+
   handleFocus = () => {
     if (this.composeForm && !this.props.singleColumn) {
       const { left, right } = this.composeForm.getBoundingClientRect();
@@ -250,9 +262,14 @@ class ComposeForm extends ImmutablePureComponent {
     this.props.onPickEmoji(position, data, needsSpace);
   };
 
-  render () {
-    const { intl, onPaste, onDrop, autoFocus, withoutNavigation, maxChars, isSubmitting } = this.props;
+render () {
+    // 👇 [수정 1] this.props에서 spoiler와 spoilerText를 꺼내오도록 추가했습니다.
+    const { intl, onPaste, onDrop, autoFocus, withoutNavigation, maxChars, isSubmitting, spoiler, spoilerText } = this.props;
     const { highlighted } = this.state;
+
+    // 👇 [추가 2] 현재 경고 문구가 어느 카테고리에 속하는지 판별합니다.
+    const cwPresets = ['노출', '폭력', '성행위', '언어'];
+    const currentCWCategory = cwPresets.includes(spoilerText) ? spoilerText : '기타';
 
     return (
       <form className='compose-form' onSubmit={this.handleSubmit}>
@@ -268,31 +285,50 @@ class ComposeForm extends ImmutablePureComponent {
             <LanguageDropdown />
           </div>
 
-          {this.props.spoiler && (
-            <div className='spoiler-input'>
-              <div className='spoiler-input__border' />
-
-              <AutosuggestInput
-                placeholder={intl.formatMessage(messages.spoiler_placeholder)}
-                value={this.props.spoilerText}
-                disabled={isSubmitting}
-                onChange={this.handleChangeSpoilerText}
-                onKeyDown={this.handleKeyDownSpoiler}
-                ref={this.setSpoilerText}
-                suggestions={this.props.suggestions}
-                onSuggestionsFetchRequested={this.onSuggestionsFetchRequested}
-                onSuggestionsClearRequested={this.onSuggestionsClearRequested}
-                onSuggestionSelected={this.onSpoilerSuggestionSelected}
-                searchTokens={[':']}
-                id='cw-spoiler-input'
+          {/* 👇 [수정 3] 여기서부터 셀렉트 박스 UI가 적용되는 부분입니다. 기존 AutosuggestInput을 대체합니다. */}
+          {spoiler && (
+            <div className='spoiler-input' style={{ display: 'flex', gap: '8px' }}>
+              <select
                 className='spoiler-input__input'
-                lang={this.props.lang}
-                spellCheck
-              />
+                value={currentCWCategory}
+                onChange={this.handleCWCategoryChange}
+                style={{ 
+                  flex: currentCWCategory === '기타' ? '0 0 auto' : '1 1 auto', 
+                  width: 'auto', 
+                  cursor: 'pointer' 
+                }}
+              >
+                <option value="노출">노출</option>
+                <option value="폭력">폭력</option>
+                <option value="성행위">성행위</option>
+                <option value="언어">언어</option>
+                <option value="기타">기타(직접 입력)</option>
+              </select>
 
-              <div className='spoiler-input__border' />
+              {currentCWCategory === '기타' && (
+                <div style={{ flex: '1 1 auto', position: 'relative' }}>
+                  <AutosuggestInput
+                    placeholder={intl.formatMessage(messages.spoiler_placeholder)}
+                    value={spoilerText || ''}
+                    disabled={isSubmitting}
+                    onChange={this.handleChangeSpoilerText}
+                    onKeyDown={this.handleKeyDownSpoiler}
+                    ref={this.setSpoilerText}
+                    suggestions={this.props.suggestions}
+                    onSuggestionsFetchRequested={this.onSuggestionsFetchRequested}
+                    onSuggestionsClearRequested={this.onSuggestionsClearRequested}
+                    onSuggestionSelected={this.onSpoilerSuggestionSelected}
+                    searchTokens={[':']}
+                    id='cw-spoiler-input'
+                    className='spoiler-input__input'
+                    lang={this.props.lang}
+                    spellCheck
+                  />
+                </div>
+              )}
             </div>
           )}
+          {/* 👆 수정 3 끝 */}
 
           <AutosuggestTextarea
             ref={this.textareaRef}

@@ -12,6 +12,7 @@ class StatusesController < ApplicationController
   before_action :set_status
   before_action :redirect_to_original, only: :show
   before_action :verify_embed_allowed, only: :embed
+  before_action :authenticate_user!, if: -> { request.format == :html || request.format.nil? }
 
   after_action :set_link_headers
 

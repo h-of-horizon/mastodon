@@ -25,6 +25,10 @@
           %span.display-name__account
             = acct(status.account)
 
+  - if status.direct_visibility?
+    %div{ style: "background-color: #ff9800; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-bottom: 8px; margin-top: 8px; display: inline-block;" }
+      다이렉트 메시지(DM) 확인됨
+
   = render partial: 'admin/shared/status_content', locals: { status: status.proper, is_quote: is_quote }
 
   - unless is_quote

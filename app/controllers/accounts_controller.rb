@@ -1,12 +1,17 @@
 # frozen_string_literal: true
 
 class AccountsController < ApplicationController
+  
   PAGE_SIZE     = 20
   PAGE_SIZE_MAX = 200
 
   include AccountControllerConcern
   include SignatureAuthentication
 
+  # 👇 [여기에 추가합니다!] 웹 브라우저(HTML)로 접속하는 방문자에게만 로그인을 강제합니다.
+  before_action :authenticate_user!, if: -> { request.format == :html || request.format.nil? }
+  # 👆 ---------------------------------------------------------
+  
   vary_by -> { public_fetch_mode? ? 'Accept, Accept-Language, Cookie' : 'Accept, Accept-Language, Cookie, Signature' }
 
   before_action :require_account_signature!, if: -> { request.format == :json && authorized_fetch_mode? }

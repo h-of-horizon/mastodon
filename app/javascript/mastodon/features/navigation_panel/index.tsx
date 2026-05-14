@@ -273,7 +273,7 @@ export const NavigationPanel: React.FC<{ multiColumn?: boolean }> = ({
           </>
         )}
 
-        {trendsEnabled && (
+        {/*{trendsEnabled && (
           <ColumnLink
             transparent
             to='/explore'
@@ -282,6 +282,7 @@ export const NavigationPanel: React.FC<{ multiColumn?: boolean }> = ({
             text={intl.formatMessage(messages.explore)}
           />
         )}
+        */}
 
         {(canViewFeed(signedIn, permissions, localLiveFeedAccess) ||
           canViewFeed(signedIn, permissions, remoteLiveFeedAccess)) && (
@@ -314,9 +315,9 @@ export const NavigationPanel: React.FC<{ multiColumn?: boolean }> = ({
 
             <hr />
 
-            <ListPanel />
+            {/*<ListPanel />*/}
 
-            <FollowedTagsPanel />
+            {/*<FollowedTagsPanel />*/}
 
             <ColumnLink
               transparent
@@ -387,7 +388,7 @@ export const NavigationPanel: React.FC<{ multiColumn?: boolean }> = ({
 
       <div className='flex-spacer' />
 
-      <Trends />
+      {/* <Trends /> */}
     </div>
   );
 };

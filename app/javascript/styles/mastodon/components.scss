@@ -11125,3 +11125,15 @@ noscript {
     gap: 4px;
   }
 }
+
+// DM 타임라인 시각적 분리
+.status-direct {
+  background-color: rgba(255, 152, 0, 0.08) !important;
+  border-left: 4px solid #ff9800 !important;
+}
+
+// DM 알림창 시각적 분리
+.notification-direct {
+  background-color: rgba(255, 152, 0, 0.1) !important;
+  border-left: 4px dashed #ff9800 !important;
+}
