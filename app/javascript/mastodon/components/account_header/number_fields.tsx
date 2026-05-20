@@ -1,34 +1,21 @@
-import { useCallback, useMemo } from 'react';
 import type { FC } from 'react';
 
 import { FormattedMessage, useIntl } from 'react-intl';
 
-import { openModal } from '@/mastodon/actions/modal';
 import { useAccount } from '@/mastodon/hooks/useAccount';
-import { useAppDispatch } from '@/mastodon/store';
 
-import { FormattedDateWrapper } from '../formatted_date';
 import { NumberFields, NumberFieldsItem } from '../number_fields';
 import { ShortNumber } from '../short_number';
 
 import classes from './styles.module.scss';
 
+// 폐쇄형 인스턴스 정책상 가입 일자(Joined)는 노출하지 않음.
+// FormattedDateWrapper / openModal / ACCOUNT_JOIN_DATE 모달 의존도 함께 제거.
 export const AccountNumberFields: FC<{ accountId: string }> = ({
   accountId,
 }) => {
   const intl = useIntl();
   const account = useAccount(accountId);
-  const createdThisYear = useMemo(
-    () => account?.created_at.includes(new Date().getFullYear().toString()),
-    [account?.created_at],
-  );
-
-  const dispatch = useAppDispatch();
-  const showJoinModal = useCallback(() => {
-    dispatch(
-      openModal({ modalType: 'ACCOUNT_JOIN_DATE', modalProps: { accountId } }),
-    );
-  }, [accountId, dispatch]);
 
   if (!account) {
     return null;
@@ -61,25 +48,6 @@ export const AccountNumberFields: FC<{ accountId: string }> = ({
         hint={intl.formatNumber(account.statuses_count)}
       >
         <ShortNumber value={account.statuses_count} />
-      </NumberFieldsItem>
-
-      <NumberFieldsItem
-        label={
-          <FormattedMessage id='account.joined_short' defaultMessage='Joined' />
-        }
-        hint={intl.formatDate(account.created_at)}
-      >
-        <button type='button' onClick={showJoinModal}>
-          {createdThisYear ? (
-            <FormattedDateWrapper
-              value={account.created_at}
-              month='short'
-              day='2-digit'
-            />
-          ) : (
-            <FormattedDateWrapper value={account.created_at} year='numeric' />
-          )}
-        </button>
       </NumberFieldsItem>
     </NumberFields>
   );

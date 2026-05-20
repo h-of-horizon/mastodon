@@ -52,7 +52,14 @@ export const AccountName: FC<{ accountId: string }> = ({ accountId }) => {
     return null;
   }
 
-  const [username = '', domain = localDomain] = account.acct.split('@');
+  // 방어적으로 acct 앞쪽의 '@'를 모두 제거 (비정상 데이터 '@notice' → 'notice')
+  // 그 뒤 split: local 사용자는 ['notice'], remote 사용자는 ['bob', 'mastodon.social']
+  const cleanAcct = account.acct.replace(/^@+/, '');
+  const [username = '', domainFromAcct] = cleanAcct.split('@');
+  const isLocal = !cleanAcct.includes('@');
+  const domain = isLocal ? localDomain : (domainFromAcct ?? localDomain);
+  // 프로필에 노출되는 깔끔 핸들: local은 '@notice', remote는 '@bob@mastodon.social'
+  const displayHandle = isLocal ? `@${username}` : `@${username}@${domain}`;
 
   return (
     <div className={classes.nameWrapper}>
@@ -66,6 +73,7 @@ export const AccountName: FC<{ accountId: string }> = ({ accountId }) => {
       <AccountNameHelp
         username={username}
         domain={domain}
+        displayHandle={displayHandle}
         isSelf={account.id === me}
       />
 
@@ -77,8 +85,9 @@ export const AccountName: FC<{ accountId: string }> = ({ accountId }) => {
 const AccountNameHelp: FC<{
   username: string;
   domain: string;
+  displayHandle: string;
   isSelf: boolean;
-}> = ({ username, domain, isSelf }) => {
+}> = ({ username, domain, displayHandle, isSelf }) => {
   const accessibilityId = useId();
   const intl = useIntl();
   const [open, setOpen] = useState(false);
@@ -88,7 +97,8 @@ const AccountNameHelp: FC<{
     setOpen((prev) => !prev);
   }, []);
 
-  const handle = `@${username}@${domain}`;
+  // 화면에 노출되는 핸들 + 복사되는 핸들 모두 displayHandle 로 통일
+  const handle = displayHandle;
 
   const dispatch = useAppDispatch();
   const [copied, setCopied] = useState(false);

@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { useMemo } from 'react';
 
 import { FormattedMessage, useIntl } from 'react-intl';
 
@@ -16,7 +15,6 @@ import { useAccountHandle } from '../display_name/default';
 import { DisplayNameSimple } from '../display_name/simple';
 import { EmojiHTML } from '../emoji/html';
 import { FollowButton } from '../follow_button';
-import { FormattedDateWrapper } from '../formatted_date';
 import { ListItemLink, ListItemWrapper } from '../list_item';
 import { NumberFields, NumberFieldsItem } from '../number_fields';
 import { RelativeTimestamp } from '../relative_timestamp';
@@ -61,11 +59,6 @@ export const AccountListItem: React.FC<Props> = ({
   const account = useAccount(accountId);
   const handle = useAccountHandle(account, domain);
   const relationship = useRelationship(accountId);
-
-  const createdThisYear = useMemo(
-    () => account?.created_at.includes(new Date().getFullYear().toString()),
-    [account?.created_at],
-  );
 
   if (!accountId || !account) {
     return null;
@@ -138,27 +131,7 @@ export const AccountListItem: React.FC<Props> = ({
             <ShortNumber value={account.statuses_count} />
           </NumberFieldsItem>
         )}
-        {stats.includes('joined') && (
-          <NumberFieldsItem
-            label={
-              <FormattedMessage
-                id='account.joined_short'
-                defaultMessage='Joined'
-              />
-            }
-            hint={intl.formatDate(account.created_at)}
-          >
-            {createdThisYear ? (
-              <FormattedDateWrapper
-                value={account.created_at}
-                month='short'
-                day='2-digit'
-              />
-            ) : (
-              <FormattedDateWrapper value={account.created_at} year='numeric' />
-            )}
-          </NumberFieldsItem>
-        )}
+        {/* 폐쇄형 인스턴스 정책상 가입 일자는 리스트에서도 노출하지 않음 */}
         {stats.includes('last-active') && (
           <NumberFieldsItem
             label={

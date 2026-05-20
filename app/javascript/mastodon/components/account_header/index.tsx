@@ -7,11 +7,7 @@ import { Helmet } from '@unhead/react/helmet';
 import { openModal } from '@/mastodon/actions/modal';
 import { useLayout } from '@/mastodon/hooks/useLayout';
 import { useVisibility } from '@/mastodon/hooks/useVisibility';
-import {
-  autoPlayGif,
-  me,
-  domain as localDomain,
-} from '@/mastodon/initial_state';
+import { autoPlayGif, me } from '@/mastodon/initial_state';
 import type { Account } from '@/mastodon/models/account';
 import { getAccountHidden } from '@/mastodon/selectors/accounts';
 import { useAppSelector, useAppDispatch } from '@/mastodon/store';
@@ -33,10 +29,9 @@ import { AccountTabs } from './tabs';
 
 const titleFromAccount = (account: Account) => {
   const displayName = account.display_name;
-  const acct =
-    account.acct === account.username
-      ? `${account.username}@${localDomain}`
-      : account.acct;
+  // 페이지 타이틀에서도 깔끔 핸들 사용: local은 'notice', remote는 'bob@mastodon.social'
+  // (방어적으로 leading '@' 제거)
+  const acct = account.acct.replace(/^@+/, '');
   const prefix =
     displayName.trim().length === 0 ? account.username : displayName;
 

@@ -477,19 +477,26 @@ class Status < ApplicationRecord
   end
 
   def increment_counter_caches
+    # 답글 카운트는 공개 범위와 무관하게 항상 증가시킴 (폐쇄형 인스턴스 정책).
+    # 단 본인의 statuses_count / reblogs_count 는 기존 정책(DM은 카운트 제외) 유지.
+    thread&.increment_count!(:replies_count) if in_reply_to_id.present?
+
     return if direct_visibility?
 
     account&.increment_count!(:statuses_count, status_created_at: created_at)
     reblog&.increment_count!(:reblogs_count) if reblog?
-    thread&.increment_count!(:replies_count) if in_reply_to_id.present? && distributable?
   end
 
   def decrement_counter_caches
-    return if direct_visibility? || new_record?
+    return if new_record?
+
+    # 답글 카운트는 공개 범위와 무관하게 항상 감소시킴.
+    thread&.decrement_count!(:replies_count) if in_reply_to_id.present?
+
+    return if direct_visibility?
 
     account&.decrement_count!(:statuses_count)
     reblog&.decrement_count!(:reblogs_count) if reblog?
-    thread&.decrement_count!(:replies_count) if in_reply_to_id.present? && distributable?
   end
 
   def trigger_create_webhooks
