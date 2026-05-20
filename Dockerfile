@@ -286,6 +286,7 @@ RUN \
   --mount=type=cache,id=apt-lib-${TARGETPLATFORM},target=/var/lib/apt,sharing=locked \
   # Install build tools and bundler dependencies from APT
   apt-get install -y --no-install-recommends \
+  nodejs \
   build-essential \
   git \
   libgdbm-dev \
@@ -407,6 +408,27 @@ RUN \
   chown mastodon:mastodon /opt/mastodon/public/system; \
   # Set Mastodon user as owner of tmp folder
   chown -R mastodon:mastodon /opt/mastodon/tmp;
+
+# root 권한으로 잠시 전환하여 nodejs 설치 및 심볼릭 링크 생성
+USER root
+
+# 1. nodejs 설치 및 환경 설정
+# 2. yarn 설치 및 활성화
+# 3. 프로젝트 전체 의존성 설치 (yarn install)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends nodejs && \
+    corepack enable && \
+    corepack prepare yarn@stable --activate && \
+    ln -sf /usr/bin/node /usr/local/bin/node || true && \
+    rm -rf /var/lib/apt/lists/*
+
+# 이미지를 빌드하는 시점에 패키지 설치를 미리 수행합니다.
+# 이 과정이 있어야 streaming 서비스가 'cors' 등을 찾을 수 있습니다.
+COPY . /opt/mastodon
+RUN corepack enable && yarn install --immutable
+
+# 다시 mastodon 유저로 돌아가기
+USER mastodon
 
 # Set the running user for resulting container
 USER mastodon

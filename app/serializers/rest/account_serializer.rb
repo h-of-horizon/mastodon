@@ -61,7 +61,9 @@ class REST::AccountSerializer < ActiveModel::Serializer
   end
 
   def acct
-    object.pretty_acct
+    # 만약 로컬 계정이라면 @username만 반환하고,
+    # 외부 계정이라면 원래대로 pretty_acct(username@domain)를 반환하라.
+    object.local? ? "@#{object.username}" : object.pretty_acct
   end
 
   def note

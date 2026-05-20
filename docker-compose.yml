@@ -25,41 +25,41 @@ services:
     volumes:
       - ./redis:/data
 
-  # es:
-  #   restart: always
-  #   image: docker.elastic.co/elasticsearch/elasticsearch:7.17.29
-  #   environment:
-  #     - "ES_JAVA_OPTS=-Xms512m -Xmx512m -Des.enforce.bootstrap.checks=true"
-  #     - "xpack.license.self_generated.type=basic"
-  #     - "xpack.security.enabled=false"
-  #     - "xpack.watcher.enabled=false"
-  #     - "xpack.graph.enabled=false"
-  #     - "xpack.ml.enabled=false"
-  #     - "bootstrap.memory_lock=true"
-  #     - "cluster.name=es-mastodon"
-  #     - "discovery.type=single-node"
-  #     - "thread_pool.write.queue_size=1000"
-  #   networks:
-  #      - external_network
-  #      - internal_network
-  #   healthcheck:
-  #      test: ["CMD-SHELL", "curl --silent --fail localhost:9200/_cluster/health || exit 1"]
-  #   volumes:
-  #      - ./elasticsearch:/usr/share/elasticsearch/data
-  #   ulimits:
-  #     memlock:
-  #       soft: -1
-  #       hard: -1
-  #     nofile:
-  #       soft: 65536
-  #       hard: 65536
-  #   ports:
-  #     - '127.0.0.1:9200:9200'
+  es:
+     restart: always
+     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.29
+     environment:
+       - "ES_JAVA_OPTS=-Xms512m -Xmx512m -Des.enforce.bootstrap.checks=true"
+       - "xpack.license.self_generated.type=basic"
+       - "xpack.security.enabled=false"
+       - "xpack.watcher.enabled=false"
+       - "xpack.graph.enabled=false"
+       - "xpack.ml.enabled=false"
+       - "bootstrap.memory_lock=true"
+       - "cluster.name=es-mastodon"
+       - "discovery.type=single-node"
+       - "thread_pool.write.queue_size=1000"
+     networks:
+        - external_network
+        - internal_network
+     healthcheck:
+        test: ["CMD-SHELL", "curl --silent --fail localhost:9200/_cluster/health || exit 1"]
+     volumes:
+        - ./elasticsearch:/usr/share/elasticsearch/data
+     ulimits:
+       memlock:
+         soft: -1
+         hard: -1
+       nofile:
+         soft: 65536
+         hard: 65536
+     ports:
+       - '127.0.0.1:9200:9200'
 
   web:
     # You can uncomment the following line if you want to not use the prebuilt image, for example if you have local code changes
-    # build: .
-    image: ghcr.io/mastodon/mastodon:v4.5.9
+    build: .
+    # image: ghcr.io/mastodon/mastodon:v4.5.9
     restart: always
     env_file: .env.production
     command: bundle exec puma -C config/puma.rb
@@ -70,20 +70,23 @@ services:
       # prettier-ignore
       test: ['CMD-SHELL',"curl -s --noproxy localhost localhost:3000/health | grep -q 'OK' || exit 1"]
     ports:
-      - '127.0.0.1:3000:3000'
+      - '127.0.0.1:3001:3000'
     depends_on:
       - db
       - redis
-      # - es
+      - es
     volumes:
-      - ./public/system:/mastodon/public/system
+      - ./public/system:/opt/mastodon/public/system
+      - ./storage:/opt/mastodon/storage
+      - ./tmp:/opt/mastodon/tmp
+      - ./log:/opt/mastodon/log
 
   streaming:
     # You can uncomment the following lines if you want to not use the prebuilt image, for example if you have local code changes
-    # build:
+    build: .
     #   dockerfile: ./streaming/Dockerfile
     #   context: .
-    image: ghcr.io/mastodon/mastodon-streaming:v4.5.9
+    # image: ghcr.io/mastodon/mastodon-streaming:v4.5.9
     restart: always
     env_file: .env.production
     command: node ./streaming/index.js
@@ -98,11 +101,18 @@ services:
     depends_on:
       - db
       - redis
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./public/system:/opt/mastodon/public/system
+      - ./storage:/opt/mastodon/storage
+      - ./tmp:/opt/mastodon/tmp
+      - ./log:/opt/mastodon/log
 
   sidekiq:
     # You can uncomment the following line if you want to not use the prebuilt image, for example if you have local code changes
-    # build: .
-    image: ghcr.io/mastodon/mastodon:v4.5.9
+    build: .
+    # image: ghcr.io/mastodon/mastodon:v4.5.9
     restart: always
     env_file: .env.production
     command: bundle exec sidekiq
@@ -113,7 +123,11 @@ services:
       - external_network
       - internal_network
     volumes:
-      - ./public/system:/mastodon/public/system
+      - ./public/system:/opt/mastodon/public/system
+      - ./storage:/opt/mastodon/storage
+      - ./tmp:/opt/mastodon/tmp
+      - ./log:/opt/mastodon/log
+
     healthcheck:
       test: ['CMD-SHELL', "ps aux | grep '[s]idekiq\ 8' || false"]
 
