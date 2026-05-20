@@ -2,6 +2,7 @@
 @use 'mastodon/mixins';
 @use 'fonts/roboto';
 @use 'fonts/roboto-mono';
+@use 'fonts/pretendard';
 
 @use 'mastodon/reset';
 @use 'mastodon/theme';
@@ -22,3 +23,7 @@
 @use 'mastodon/dashboard';
 @use 'mastodon/rtl';
 @use 'mastodon/rich_text';
+
+// 한국어 본문 가독성 튜닝(Pretendard + 자간/장평/줄높이/keep-all)을
+// default 테마에도 적용. 트위터 테마들과 동일한 모듈을 공유.
+@use 'twitter/typography' as typography;

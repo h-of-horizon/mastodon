@@ -8,19 +8,20 @@ import { DisplayNameWithoutDomain } from './no-domain';
 
 export function useAccountHandle(
   account: DisplayNameProps['account'],
-  localDomain: DisplayNameProps['localDomain'],
+  _localDomain: DisplayNameProps['localDomain'],
 ) {
   return useMemo(() => {
     if (!account) {
       return null;
     }
-    let acct = account.get('acct');
-
-    if (!acct.includes('@') && localDomain) {
-      acct = `${acct}@${localDomain}`;
-    }
+    // acct가 이미 '@'로 시작하는 비정상 데이터(예: '@notice')가 들어와도
+    // 결과가 '@@notice'가 되지 않도록 방어적으로 leading '@'를 제거.
+    // 또한 local 사용자에게는 @localDomain 을 붙이지 않아 '@notice' 처럼
+    // 깔끔하게 노출. (Remote 사용자는 acct 자체가 'user@remote.tld' 형태라
+    // 결과는 자연스럽게 '@user@remote.tld'.)
+    const acct = account.get('acct').replace(/^@+/, '');
     return `@${acct}`;
-  }, [account, localDomain]);
+  }, [account]);
 }
 
 export const DisplayNameDefault: FC<
