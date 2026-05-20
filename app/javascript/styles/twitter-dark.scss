@@ -1,0 +1,37 @@
+// =============================================================================
+//  Twitter Dark ("Lights out") Theme for Mastodon
+//  완전 검정 surface + 트위터 블루 액센트. Light/Dim 과 컴포넌트/타이포 공유.
+// =============================================================================
+
+@use 'mastodon/variables';
+@use 'mastodon/mixins';
+@use 'fonts/roboto';
+@use 'fonts/roboto-mono';
+@use 'fonts/pretendard';
+
+@use 'mastodon/reset';
+@use 'mastodon/theme';
+@use 'mastodon/basics';
+@use 'mastodon/branding';
+@use 'mastodon/containers';
+@use 'mastodon/lists';
+@use 'mastodon/widgets';
+@use 'mastodon/forms';
+@use 'mastodon/accounts';
+@use 'mastodon/components';
+@use 'mastodon/polls';
+@use 'mastodon/modal';
+@use 'mastodon/emoji_picker';
+@use 'mastodon/about';
+@use 'mastodon/tables';
+@use 'mastodon/admin';
+@use 'mastodon/dashboard';
+@use 'mastodon/rtl';
+@use 'mastodon/rich_text';
+
+// --- 트위터 다크 오버라이드 레이어 ---
+@use 'twitter/tokens-dark'; // 변형별
+@use 'twitter/typography'; // 공유
+@use 'twitter/components'; // 공유
+@use 'twitter/dm'; // 공유
+@use 'twitter/media-modal'; // 공유

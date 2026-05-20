@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Rename-Item -Path \"app/javascript/styles/twitter-light\" -NewName \"twitter\")",
+      "PowerShell(Rename-Item -Path \"app/javascript/styles/twitter/_tokens.scss\" -NewName \"_tokens-light.scss\")"
+    ]
+  }
+}

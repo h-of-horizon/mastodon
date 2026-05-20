@@ -1,0 +1,42 @@
+// =============================================================================
+//  Twitter Light Theme for Mastodon
+//  - 마스토돈 기본 테마(default)는 그대로 두고, 이 파일이 별도 번들로 컴파일됩니다.
+//  - 색/폰트/컴포넌트는 모두 application.scss 이후에 덮어쓰는 방식이라
+//    업스트림(default 테마) 변경 시 충돌 없이 따라갑니다.
+//  - 컴포넌트/타이포/DM/미디어 모달 오버라이드는 세 변형(Light/Dark/Dim)이
+//    공유하고, 색 토큰만 변형별로 다릅니다.
+// =============================================================================
+
+// --- 1) 기본 마스토돈 스타일을 그대로 임포트 (application.scss 와 동일) ---
+@use 'mastodon/variables';
+@use 'mastodon/mixins';
+@use 'fonts/roboto';
+@use 'fonts/roboto-mono';
+@use 'fonts/pretendard';
+
+@use 'mastodon/reset';
+@use 'mastodon/theme';
+@use 'mastodon/basics';
+@use 'mastodon/branding';
+@use 'mastodon/containers';
+@use 'mastodon/lists';
+@use 'mastodon/widgets';
+@use 'mastodon/forms';
+@use 'mastodon/accounts';
+@use 'mastodon/components';
+@use 'mastodon/polls';
+@use 'mastodon/modal';
+@use 'mastodon/emoji_picker';
+@use 'mastodon/about';
+@use 'mastodon/tables';
+@use 'mastodon/admin';
+@use 'mastodon/dashboard';
+@use 'mastodon/rtl';
+@use 'mastodon/rich_text';
+
+// --- 2) 트위터 라이트 오버라이드 레이어 ---
+@use 'twitter/tokens-light'; // 변형별
+@use 'twitter/typography'; // 공유
+@use 'twitter/components'; // 공유
+@use 'twitter/dm'; // 공유 (DM 분리 UI 튜닝)
+@use 'twitter/media-modal'; // 공유 (미디어 모달 라운드)

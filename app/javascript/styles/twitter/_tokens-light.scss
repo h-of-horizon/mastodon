@@ -1,0 +1,137 @@
+// =============================================================================
+//  Twitter Light — Color Tokens
+//  트위터(X) 라이트 모드 팔레트로 CSS 토큰만 덮어씁니다.
+//  마스토돈 컴포넌트는 모두 토큰을 통해 색을 받기 때문에,
+//  토큰만 갈아끼우면 전체가 자동으로 트위터 룩을 따라옵니다.
+// =============================================================================
+
+// 트위터(X) 공식 라이트 팔레트(근사치)
+//  - Brand Blue: #1d9bf0
+//  - Brand Blue Hover: #1a8cd8
+//  - Hover Gray:  #f7f9f9
+//  - Border:      #eff3f4
+//  - Text:        #0f1419
+//  - Subtext:     #536471
+//  - Like Red:    #f91880
+//  - Repost Grn:  #00ba7c
+
+:root,
+html,
+html[data-color-scheme='light'],
+html[data-color-scheme='dark'] {
+  color-scheme: light;
+
+  // --- Brand / Accent ---
+  --color-twitter-blue: #1d9bf0;
+  --color-twitter-blue-hover: #1a8cd8;
+  --color-twitter-like: #f91880;
+  --color-twitter-repost: #00ba7c;
+  --color-twitter-bookmark: #1d9bf0;
+
+  // --- Sticky header (반투명 + blur) / Scrollbar ---
+  --color-twitter-header-bg: rgb(255 255 255 / 85%);
+  --color-twitter-scrollbar: #cfd9de;
+
+  // --- DM 분리 마커 (light 톤에 맞춰 부드럽게) ---
+  --color-twitter-dm-bg: rgb(255 152 0 / 6%);
+  --color-twitter-dm-border: #ff9800;
+  --color-twitter-dm-accent: #b76e00;
+  --color-twitter-dm-badge-bg: #fff4e0;
+  --color-twitter-dm-badge-text: #8a4d00;
+
+  // --- Surface neutrals (트위터는 거의 순백 + 옅은 회색 구조) ---
+  --color-twitter-surface: #fff;
+  --color-twitter-surface-hover: #f7f9f9;
+  --color-twitter-surface-soft: #f7f9f9;
+  --color-twitter-divider: #eff3f4;
+  --color-twitter-divider-soft: #f1f3f4;
+
+  // --- Text ---
+  --color-twitter-text: #0f1419;
+  --color-twitter-text-soft: #536471;
+  --color-twitter-text-mute: #8b98a5;
+
+  // ===== Mastodon 토큰 매핑 (light 토큰을 통째로 트위터 톤으로 덮어씀) =====
+
+  /* TEXT */
+  --color-text-primary: var(--color-twitter-text);
+  --color-text-secondary: var(--color-twitter-text-soft);
+  --color-text-tertiary: var(--color-twitter-text-mute);
+  --color-text-inverted: #fff;
+  --color-text-brand: var(--color-twitter-blue);
+  --color-text-brand-soft: var(--color-twitter-blue);
+  --color-text-on-brand-base: #fff;
+  --color-text-brand-on-inverted: var(--color-twitter-blue);
+  --color-text-status-links: var(--color-twitter-blue);
+  --color-text-error: #f4212e;
+  --color-text-on-error-base: #fff;
+  --color-text-warning: #b87900;
+  --color-text-on-warning-base: #fff;
+  --color-text-success: var(--color-twitter-repost);
+  --color-text-on-success-base: #fff;
+  --color-text-disabled: #cfd9de;
+  --color-text-on-disabled: #aab8c2;
+  --color-text-bookmark-highlight: var(--color-twitter-bookmark);
+  --color-text-favourite-highlight: var(--color-twitter-like);
+
+  /* BACKGROUND */
+  --color-bg-primary: var(--color-twitter-surface);
+  --overlay-strength-secondary: 3%;
+  --color-bg-secondary: var(--color-twitter-surface);
+  --color-bg-tertiary: var(--color-twitter-surface-soft);
+
+  --color-bg-inverted: var(--color-twitter-text);
+  --color-bg-overlay-base: rgb(0 0 0 / 40%);
+  --color-bg-overlay-highlight: rgb(15 20 25 / 3%);
+  --color-bg-overlay: var(--color-twitter-surface);
+
+  // Brand bg
+  --color-bg-brand-base: var(--color-twitter-blue);
+  --color-bg-brand-base-hover: var(--color-twitter-blue-hover);
+  --color-bg-brand-soft: #e8f5fd;
+  --color-bg-brand-softest: #f7fbfe;
+
+  // Error
+  --color-bg-error-base: #f4212e;
+  --color-bg-error-base-hover: #d9182a;
+  --color-bg-error-soft: #fde7e9;
+  --color-bg-error-softest: #fef4f5;
+
+  // Warning
+  --color-bg-warning-base: #ffd400;
+  --color-bg-warning-soft: #fff4cc;
+  --color-bg-warning-softest: #fffae6;
+
+  // Success
+  --color-bg-success-base: var(--color-twitter-repost);
+  --color-bg-success-soft: #d6f5e8;
+  --color-bg-success-softest: #ecf9f3;
+
+  /* BORDER — 트위터는 매우 옅은 1px 라인이 시그니처 */
+  --color-border-primary: var(--color-twitter-divider);
+  --color-border-brand: var(--color-twitter-blue);
+  --color-border-brand-soft: #cfe8fa;
+  --color-border-error: #f4212e;
+  --color-border-error-soft: rgb(244 33 46 / 50%);
+  --color-border-warning-soft: rgb(255 212 0 / 50%);
+  --color-border-success-soft: #b2e5d1;
+  --color-border-media: rgb(255 255 255 / 15%);
+
+  /* SHADOW — 트위터는 그림자 거의 안 씀, 모달만 살짝 */
+  --shadow-strength-primary: 12%;
+  --color-shadow-primary: rgb(101 119 134 / 20%);
+  --dropdown-shadow:
+    0 0 15px rgb(101 119 134 / 10%),
+    0 0 3px 1px rgb(101 119 134 / 5%);
+  --overlay-icon-shadow: drop-shadow(0 0 2px rgb(101 119 134 / 40%));
+
+  /* RICH TEXT */
+  --rich-text-container-color: #e8f5fd;
+  --rich-text-text-color: #0f1419;
+  --rich-text-decorations-color: #cfe8fa;
+}
+
+// 강제로 light 색상 스킴 — 사용자가 OS 다크모드여도 이 테마는 항상 라이트
+html {
+  color-scheme: light;
+}

@@ -1,0 +1,221 @@
+// =============================================================================
+//  Twitter Light — Typography
+//  한국어 장문(~2000자) 가독성 최적화
+//   - 폰트: Pretendard Variable (system-ui fallback)
+//   - 장평: OpenType 'palt' (한글/구두점 비례 너비)로 자연스러운 좌우 공백
+//   - 자간: 본문 -0.005em, 상세 -0.003em (장문은 자간 너무 좁히면 피로)
+//   - 행간: 목록 1.55, 상세 1.7
+//   - 줄바꿈: 한국어는 word-break: keep-all (어절 단위)
+// =============================================================================
+
+// ----------------------------------------------------------
+//  Font Stack
+// ----------------------------------------------------------
+//
+//  Pretendard Variable → system-ui → mastodon-font-sans-serif(Roboto) → sans-serif
+//
+//  emoji 폰트는 마스토돈 컴포넌트에서 따로 처리하므로 여기선 비폰트 emoji
+//  fallback만 마지막에 추가.
+$twitter-font-stack:
+  'Pretendard Variable',
+  system-ui,
+  -apple-system,
+  blinkmacsystemfont,
+  'Segoe UI',
+  'Apple SD Gothic Neo',
+  'Malgun Gothic',
+  'Helvetica Neue',
+  'mastodon-font-sans-serif',
+  sans-serif,
+  'Apple Color Emoji',
+  'Segoe UI Emoji',
+  'Segoe UI Symbol';
+
+// ----------------------------------------------------------
+//  Global body
+// ----------------------------------------------------------
+body,
+.system-font body,
+body.app-body {
+  font-family: $twitter-font-stack;
+  font-feature-settings:
+    'palt' 1,
+    'kern' 1,
+    'calt' 1,
+    'ss01' 1;
+  font-optical-sizing: auto;
+  text-rendering: optimizelegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.005em;
+}
+
+// Pretendard 가용 시 모든 표준 클래스/입력 컴포넌트에도 적용
+button,
+input,
+optgroup,
+select,
+textarea,
+.button,
+.compose-form__highlightable,
+.compose-form__highlightable textarea,
+.search__input,
+.search-popout {
+  font-family: $twitter-font-stack;
+  letter-spacing: -0.005em;
+}
+
+// ----------------------------------------------------------
+//  Status — 목록 카드 본문
+// ----------------------------------------------------------
+.status__content,
+.reply-indicator__content {
+  font-size: 15.5px;
+  line-height: 1.55;
+  letter-spacing: -0.005em;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  // 한글 비례 너비(palt) + 라틴/숫자 등은 그대로
+  font-variant-east-asian: proportional-width;
+}
+
+// ----------------------------------------------------------
+//  Detailed status — 상세 화면(긴 글 본문)
+//  여기가 2000자 글이 펼쳐지는 곳. 가장 공들여 튜닝.
+// ----------------------------------------------------------
+.detailed-status .status__content,
+.detailed-status .status__content__text {
+  font-size: 18px;
+  line-height: 1.7; // 한글 장문 sweet spot
+  letter-spacing: -0.003em; // 장문에서는 자간을 거의 안 좁힘
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  font-variant-east-asian: proportional-width;
+  font-feature-settings:
+    'palt' 1,
+    'kern' 1,
+    'calt' 1;
+  color: var(--color-text-primary);
+
+  // 문단 사이 간격 — 마스토돈 기본은 좁아서 장문이 답답함
+  p {
+    margin-bottom: 1em;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  // 리스트/인용
+  ul,
+  ol {
+    line-height: 1.65;
+    margin: 0.6em 0 1em;
+    padding-inline-start: 1.5em;
+  }
+
+  blockquote {
+    border-inline-start: 3px solid var(--color-border-primary);
+    margin: 0.6em 0 1em;
+    padding: 0.2em 0 0.2em 1em;
+    color: var(--color-text-secondary);
+  }
+
+  code,
+  pre {
+    font-family:
+      'JetBrains Mono', 'Fira Code', 'mastodon-font-monospace', monospace;
+    font-size: 0.92em;
+  }
+
+  pre {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-primary);
+    border-radius: 12px;
+    padding: 12px 14px;
+    overflow-x: auto;
+  }
+
+  a {
+    color: var(--color-text-brand);
+    text-underline-offset: 2px;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+// ----------------------------------------------------------
+//  Display name / headings — 트위터 헤더 스타일
+// ----------------------------------------------------------
+.display-name__html,
+.detailed-status__display-name strong,
+.account__display-name strong,
+.column-header,
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  font-feature-settings: 'kern' 1, 'palt' 1;
+}
+
+.column-header > button,
+.column-header,
+.column-back-button {
+  font-size: 20px;
+  line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+// 사용자명 / 핸들 — 약간 작고 회색
+.display-name__account,
+.detailed-status__display-name span,
+.account__display-name span {
+  font-size: 14px;
+  letter-spacing: 0;
+  color: var(--color-text-secondary);
+}
+
+// 시간/메타 정보
+.status__relative-time,
+.detailed-status__datetime,
+.detailed-status__meta {
+  color: var(--color-text-secondary);
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+// 숫자(부스트/답글/좋아요 카운트) 정렬용
+.animated-number,
+.account__header__extra__links a strong,
+.detailed-status__meta .animated-number {
+  font-variant-numeric: tabular-nums;
+}
+
+// 작성창
+.compose-form .compose-form__highlightable .autosuggest-textarea__textarea,
+.compose-form .autosuggest-textarea__textarea {
+  font-family: $twitter-font-stack;
+  font-size: 18px;
+  line-height: 1.55;
+  letter-spacing: -0.004em;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  font-feature-settings:
+    'palt' 1,
+    'kern' 1;
+}
+
+// CJK 언어 컨텍스트에서만 word-break/keep-all 보강
+:lang(ko),
+:lang(ja),
+:lang(zh-CN),
+:lang(zh-HK),
+:lang(zh-TW) {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}

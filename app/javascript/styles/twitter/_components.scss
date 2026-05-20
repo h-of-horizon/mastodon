@@ -1,0 +1,455 @@
+// =============================================================================
+//  Twitter Light — Components
+//  마스토돈 컴포넌트를 트위터 룩에 맞춰 보정.
+//  - 카드: 그림자 없음, 1px 옅은 디바이더, hover 시 옅은 회색 surface
+//  - 버튼: pill (border-radius 9999px), bold, 트위터 블루
+//  - 액션 바: 좋아요/리블로그/답글 호버 시 컬러 백드롭
+//  - 상세 화면: 본문 폭 넓히고 위아래 호흡 주기
+// =============================================================================
+
+// ----------------------------------------------------------
+//  1) 컬럼/사이드바 — 사이 경계를 옅은 1px 라인으로
+// ----------------------------------------------------------
+.columns-area__panels__pane,
+.columns-area__panels__main,
+.column,
+.drawer {
+  background: var(--color-bg-primary);
+}
+
+.columns-area__panels__pane--navigational .columns-area__panels__pane__inner,
+.columns-area__panels__pane--compositional .columns-area__panels__pane__inner {
+  background: transparent;
+  border: 0;
+}
+
+// 메인 컬럼 좌우에 트위터식 옅은 보더
+.columns-area__panels__main {
+  border-inline: 1px solid var(--color-border-primary);
+}
+
+// 컬럼 헤더 — sticky + blur
+.column-header,
+.column-header__wrapper {
+  background: var(--color-twitter-header-bg);
+  backdrop-filter: saturate(180%) blur(12px);
+  border: 0;
+  border-bottom: 1px solid var(--color-border-primary);
+}
+
+.column-header > button {
+  padding: 14px 16px;
+}
+
+// 사이드바 네비 — pill 형 아이템(트위터 좌측 네비 느낌)
+.navigation-panel {
+  background: transparent;
+  border: 0;
+}
+
+.column-link {
+  border-radius: 9999px;
+  padding: 12px 16px;
+  font-size: 17px;
+  font-weight: 500;
+  transition: background-color 0.15s ease;
+
+  &:hover,
+  &:focus,
+  &:active {
+    background: var(--color-bg-tertiary);
+  }
+
+  &--transparent.active,
+  &.active {
+    color: var(--color-text-primary);
+    font-weight: 700;
+  }
+}
+
+// ----------------------------------------------------------
+//  2) Status (목록) — 트위터 트윗 카드
+// ----------------------------------------------------------
+.status {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--color-border-primary);
+  transition: background-color 0.12s ease;
+
+  &:hover {
+    background: var(--color-bg-overlay-highlight);
+    cursor: pointer;
+  }
+
+  // 아바타는 트위터 룩 — 원형, 살짝 더 큼
+  .status__avatar,
+  .account__avatar {
+    border-radius: 9999px;
+  }
+}
+
+.status__avatar {
+  width: 44px;
+  height: 44px;
+}
+
+// 첫 카드의 상단 보더 제거 (스크롤 영역 첫 요소)
+.scrollable > div:first-child > .status,
+.scrollable > .status:first-child {
+  border-top: 0;
+}
+
+// 카드 내부 본문 ↔ 액션 바 사이 호흡
+.status__action-bar {
+  margin-top: 10px;
+  margin-inline-start: calc(44px + 12px); // 아바타 폭 + gap 만큼 들여쓰기
+  max-width: calc(100% - (44px + 12px));
+  gap: 4px;
+}
+
+// ----------------------------------------------------------
+//  3) Detailed Status — 상세 화면(긴 글 읽기 최적화)
+// ----------------------------------------------------------
+.detailed-status {
+  padding: 16px 20px 12px;
+  border-top: 0;
+  border-bottom: 1px solid var(--color-border-primary);
+
+  // 본문 위/아래 호흡
+  .status__content {
+    margin-top: 14px;
+    margin-bottom: 18px;
+  }
+
+  // 미디어 위쪽 공간
+  .media-gallery,
+  .video-player,
+  .audio-player,
+  .collection-preview,
+  .status-card {
+    margin-top: 16px;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+}
+
+// 상세 화면 디스플레이 네임 블록(아바타 + 이름 + 핸들)
+.detailed-status__display-name {
+  margin-bottom: 4px;
+  gap: 12px;
+  align-items: center;
+}
+
+.detailed-status__display-avatar .account__avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+}
+
+.detailed-status__display-name strong {
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.detailed-status__display-name span {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+// 메타(시간/조회수/출처) — 트위터처럼 본문 아래 한 줄
+.detailed-status__meta {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border-primary);
+  font-size: 14px;
+  color: var(--color-text-secondary);
+
+  &__line {
+    padding: 10px 0;
+  }
+}
+
+.detailed-status__action-bar {
+  padding: 4px 0;
+  border-bottom: 1px solid var(--color-border-primary);
+  gap: 8px;
+  justify-content: space-between;
+}
+
+// ----------------------------------------------------------
+//  4) Action Bar — 트위터식 컬러 호버 백드롭
+// ----------------------------------------------------------
+.status__action-bar,
+.detailed-status__action-bar {
+  .icon-button {
+    transition:
+      color 0.12s ease,
+      background-color 0.12s ease;
+    border-radius: 9999px;
+
+    &:hover,
+    &:focus,
+    &:active {
+      background: rgb(29 155 240 / 10%);
+      color: var(--color-twitter-blue);
+    }
+  }
+
+  // 답글 — 파랑(기본 블루 호버는 위에서 처리됨)
+
+  // 부스트(리블로그) — 초록
+  .icon-button.reblogPrivate,
+  .icon-button[title*='부스트'],
+  .icon-button[aria-label*='부스트'],
+  .icon-button[title*='Boost'],
+  .icon-button[aria-label*='Boost'],
+  .status__action-bar__button-wrapper:nth-child(2) .icon-button {
+    &:hover,
+    &:focus,
+    &:active {
+      background: rgb(0 186 124 / 10%);
+      color: var(--color-twitter-repost);
+    }
+
+    &.active {
+      color: var(--color-twitter-repost);
+    }
+  }
+
+  // 좋아요 — 핑크
+  .icon-button[title*='좋아'],
+  .icon-button[aria-label*='좋아'],
+  .icon-button[title*='Favourite'],
+  .icon-button[aria-label*='Favourite'],
+  .star-icon,
+  .status__action-bar__button-wrapper:nth-child(3) .icon-button {
+    &:hover,
+    &:focus,
+    &:active {
+      background: rgb(249 24 128 / 10%);
+      color: var(--color-twitter-like);
+    }
+
+    &.active {
+      color: var(--color-twitter-like);
+    }
+  }
+
+  .icon-button.active {
+    &[title*='북마크'],
+    &[aria-label*='북마크'],
+    &[title*='Bookmark'],
+    &[aria-label*='Bookmark'] {
+      color: var(--color-twitter-bookmark);
+    }
+  }
+}
+
+// ----------------------------------------------------------
+//  5) Buttons — pill 모양 + 트위터 블루
+// ----------------------------------------------------------
+.button {
+  border-radius: 9999px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  padding: 8px 16px;
+  min-height: 36px;
+  transition: background-color 0.12s ease;
+
+  &.button-primary,
+  &.button-tertiary {
+    border-radius: 9999px;
+  }
+
+  &.button-secondary {
+    border-radius: 9999px;
+    border: 1px solid var(--color-border-primary);
+    background: transparent;
+    color: var(--color-text-primary);
+
+    &:hover,
+    &:focus {
+      background: var(--color-bg-tertiary);
+    }
+  }
+}
+
+// 게시 버튼 — 트위터 블루 + Bold
+.compose-form__publish-button-wrapper button,
+.compose-form .button.button--block,
+.compose-form__publish .button {
+  border-radius: 9999px;
+  font-weight: 700;
+  background: var(--color-twitter-blue);
+  color: #fff;
+
+  &:hover,
+  &:focus {
+    background: var(--color-twitter-blue-hover);
+  }
+}
+
+// ----------------------------------------------------------
+//  6) Compose form — 트위터식 작성창
+// ----------------------------------------------------------
+.compose-form {
+  padding: 12px 16px;
+
+  .compose-form__highlightable {
+    border: 0;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    border-bottom: 1px solid var(--color-border-primary);
+  }
+
+  .compose-form__buttons-wrapper {
+    background: transparent;
+    border-top: 0;
+    padding-top: 8px;
+  }
+
+  // 카운터 — 트위터처럼 작고 라이트
+  .character-counter {
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// ----------------------------------------------------------
+//  7) Account header (프로필 헤더) — 트위터 룩
+// ----------------------------------------------------------
+.account__header {
+  background: var(--color-bg-primary);
+
+  &__bar {
+    border-bottom: 1px solid var(--color-border-primary);
+  }
+
+  &__image {
+    border-radius: 0;
+    aspect-ratio: 3 / 1;
+  }
+
+  &__tabs__buttons .button {
+    border-radius: 9999px;
+  }
+
+  &__tabs__name h1 {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+}
+
+// 프로필 아바타 — 흰 보더가 본문을 살짝 덮음 (트위터 시그니처)
+.account__header__bar .account__avatar,
+.account__header .account__avatar {
+  border: 4px solid var(--color-bg-primary);
+  border-radius: 9999px;
+}
+
+// ----------------------------------------------------------
+//  8) Dropdown / Search — 흰 배경 + 부드러운 그림자
+// ----------------------------------------------------------
+.dropdown-menu,
+.search-popout,
+.emoji-picker-dropdown__menu,
+.privacy-dropdown__dropdown,
+.language-dropdown__dropdown {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 16px;
+  box-shadow:
+    0 0 15px rgb(101 119 134 / 10%),
+    0 0 3px 1px rgb(101 119 134 / 5%);
+
+  &__arrow {
+    display: none; // 트위터는 화살표 없는 카드
+  }
+}
+
+.dropdown-menu__item a {
+  &:hover,
+  &:focus {
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+  }
+}
+
+// 검색창 — pill
+.search__input,
+.search-popout {
+  border-radius: 9999px;
+}
+
+.search__input {
+  background: var(--color-bg-tertiary);
+  border: 1px solid transparent;
+
+  &:focus {
+    background: var(--color-bg-primary);
+    border-color: var(--color-twitter-blue);
+  }
+}
+
+// ----------------------------------------------------------
+//  9) Notifications — 카드 일관성
+// ----------------------------------------------------------
+.notification-ungrouped,
+.notification-group {
+  border-bottom: 1px solid var(--color-border-primary);
+  transition: background-color 0.12s ease;
+
+  &:hover {
+    background: var(--color-bg-overlay-highlight);
+  }
+}
+
+// ----------------------------------------------------------
+// 10) Media — 라운드 모서리(트위터 16px)
+// ----------------------------------------------------------
+.media-gallery,
+.video-player,
+.audio-player,
+.attachment-list,
+.collection-preview,
+.status-card {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-primary);
+}
+
+// ----------------------------------------------------------
+// 11) Modal / Dialog
+// ----------------------------------------------------------
+.modal-root__container {
+  .boost-modal,
+  .confirmation-modal,
+  .report-modal,
+  .actions-modal,
+  .compare-history-modal,
+  .embed-modal {
+    border-radius: 16px;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border-primary);
+  }
+}
+
+// ----------------------------------------------------------
+// 12) Scrollbar — 트위터 라이트의 옅은 스크롤
+// ----------------------------------------------------------
+html.custom-scrollbars {
+  scrollbar-color: var(--color-twitter-scrollbar) transparent;
+}
+
+html.custom-scrollbars *::-webkit-scrollbar-thumb {
+  background: var(--color-twitter-scrollbar);
+  border-radius: 9999px;
+}
+
+// ----------------------------------------------------------
+// 13) Focus ring — 접근성 + 트위터 블루
+// ----------------------------------------------------------
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-twitter-blue);
+  outline-offset: 2px;
+}

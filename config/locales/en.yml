@@ -2157,6 +2157,9 @@ en:
     title: The terms of service of %{domain} are changing
   themes:
     default: Mastodon
+    twitter-light: Twitter Light
+    twitter-dark: Twitter Dark
+    twitter-dim: Twitter Dim
   time:
     formats:
       default: "%b %d, %Y, %H:%M"

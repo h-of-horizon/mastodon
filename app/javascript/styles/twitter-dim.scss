@@ -1,0 +1,37 @@
+// =============================================================================
+//  Twitter Dim Theme for Mastodon
+//  네이비(#15202b) 다크 변형. 트위터 클래식 'Dim' 모드.
+// =============================================================================
+
+@use 'mastodon/variables';
+@use 'mastodon/mixins';
+@use 'fonts/roboto';
+@use 'fonts/roboto-mono';
+@use 'fonts/pretendard';
+
+@use 'mastodon/reset';
+@use 'mastodon/theme';
+@use 'mastodon/basics';
+@use 'mastodon/branding';
+@use 'mastodon/containers';
+@use 'mastodon/lists';
+@use 'mastodon/widgets';
+@use 'mastodon/forms';
+@use 'mastodon/accounts';
+@use 'mastodon/components';
+@use 'mastodon/polls';
+@use 'mastodon/modal';
+@use 'mastodon/emoji_picker';
+@use 'mastodon/about';
+@use 'mastodon/tables';
+@use 'mastodon/admin';
+@use 'mastodon/dashboard';
+@use 'mastodon/rtl';
+@use 'mastodon/rich_text';
+
+// --- 트위터 딤 오버라이드 레이어 ---
+@use 'twitter/tokens-dim'; // 변형별
+@use 'twitter/typography'; // 공유
+@use 'twitter/components'; // 공유
+@use 'twitter/dm'; // 공유
+@use 'twitter/media-modal'; // 공유

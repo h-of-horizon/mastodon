@@ -1950,6 +1950,9 @@ ko:
     title: "%{domain} 도메인의 이용 약관에 변경 있음"
   themes:
     default: Mastodon
+    twitter-light: Twitter Light
+    twitter-dark: Twitter Dark
+    twitter-dim: Twitter Dim
   time:
     formats:
       default: "%Y-%m-%d %H:%M"

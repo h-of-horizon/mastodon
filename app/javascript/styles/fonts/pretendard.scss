@@ -1,0 +1,27 @@
+// Pretendard Variable
+// License: SIL Open Font License 1.1
+// Upstream: https://github.com/orioncactus/pretendard
+//
+// CDN 사용에 대한 주의:
+// 마스토돈 CSP(font_src)가 'self'만 허용하면 이 폰트가 로드되지 않습니다.
+// 그 경우 config/initializers/content_security_policy.rb 의 font_src에
+// "https://cdn.jsdelivr.net" 을 추가하거나, woff2 파일을 받아 다음 위치로 옮기고
+// src 경로를 로컬로 바꿔 주세요:
+//   app/javascript/fonts/pretendard/PretendardVariable.woff2
+
+@font-face {
+  font-family: 'Pretendard Variable';
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/woff2/PretendardVariable.woff2')
+    format('woff2-variations');
+  // 한국어 본문 가독성을 위한 OpenType 피처
+  //  - palt: Proportional Alternate Widths (한글/구두점 좌우 여백 자연 조정)
+  //  - kern: Kerning
+  //  - calt: Contextual Alternates
+  font-feature-settings:
+    'palt' 1,
+    'kern' 1,
+    'calt' 1;
+}

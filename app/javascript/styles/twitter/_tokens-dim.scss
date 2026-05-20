@@ -1,0 +1,125 @@
+// =============================================================================
+//  Twitter Dim — Color Tokens
+//  네이비 톤(#15202b) 다크 변형. 트위터 클래식 'Dim' 모드.
+// =============================================================================
+
+:root,
+html,
+html[data-color-scheme='light'],
+html[data-color-scheme='dark'] {
+  color-scheme: dark;
+
+  // --- Brand / Accent ---
+  --color-twitter-blue: #1d9bf0;
+  --color-twitter-blue-hover: #1a8cd8;
+  --color-twitter-like: #f91880;
+  --color-twitter-repost: #00ba7c;
+  --color-twitter-bookmark: #1d9bf0;
+
+  // --- Sticky header / Scrollbar ---
+  --color-twitter-header-bg: rgb(21 32 43 / 85%);
+  --color-twitter-scrollbar: #38444d;
+
+  // --- DM 분리 마커 ---
+  --color-twitter-dm-bg: rgb(255 180 74 / 8%);
+  --color-twitter-dm-border: #ffb44a;
+  --color-twitter-dm-accent: #ffb44a;
+  --color-twitter-dm-badge-bg: rgb(255 180 74 / 15%);
+  --color-twitter-dm-badge-text: #ffd9a3;
+
+  // --- Surface neutrals (트위터 Dim 시그니처 네이비) ---
+  --color-twitter-surface: #15202b;
+  --color-twitter-surface-hover: #1e2732;
+  --color-twitter-surface-soft: #192734;
+  --color-twitter-divider: #38444d;
+  --color-twitter-divider-soft: #253341;
+
+  // --- Text ---
+  --color-twitter-text: #f7f9f9;
+  --color-twitter-text-soft: #8b98a5;
+  --color-twitter-text-mute: #5b7083;
+
+  // ===== Mastodon 토큰 매핑 =====
+
+  /* TEXT */
+  --color-text-primary: var(--color-twitter-text);
+  --color-text-secondary: var(--color-twitter-text-soft);
+  --color-text-tertiary: var(--color-twitter-text-mute);
+  --color-text-inverted: #15202b;
+  --color-text-brand: var(--color-twitter-blue);
+  --color-text-brand-soft: var(--color-twitter-blue);
+  --color-text-on-brand-base: #fff;
+  --color-text-brand-on-inverted: var(--color-twitter-blue);
+  --color-text-status-links: var(--color-twitter-blue);
+  --color-text-error: #f4212e;
+  --color-text-on-error-base: #fff;
+  --color-text-warning: #ffd400;
+  --color-text-on-warning-base: #15202b;
+  --color-text-success: var(--color-twitter-repost);
+  --color-text-on-success-base: #fff;
+  --color-text-disabled: #455a6a;
+  --color-text-on-disabled: #5b7083;
+  --color-text-bookmark-highlight: var(--color-twitter-bookmark);
+  --color-text-favourite-highlight: var(--color-twitter-like);
+
+  /* BACKGROUND */
+  --color-bg-primary: var(--color-twitter-surface);
+  --overlay-strength-secondary: 6%;
+  --color-bg-secondary: var(--color-twitter-surface);
+  --color-bg-tertiary: var(--color-twitter-surface-soft);
+
+  --color-bg-inverted: var(--color-twitter-text);
+  --color-bg-overlay-base: rgb(21 32 43 / 60%);
+  --color-bg-overlay-highlight: rgb(255 255 255 / 4%);
+  --color-bg-overlay: var(--color-twitter-surface);
+
+  // Brand bg
+  --color-bg-brand-base: var(--color-twitter-blue);
+  --color-bg-brand-base-hover: var(--color-twitter-blue-hover);
+  --color-bg-brand-soft: rgb(29 155 240 / 14%);
+  --color-bg-brand-softest: rgb(29 155 240 / 6%);
+
+  // Error
+  --color-bg-error-base: #f4212e;
+  --color-bg-error-base-hover: #d9182a;
+  --color-bg-error-soft: rgb(244 33 46 / 14%);
+  --color-bg-error-softest: rgb(244 33 46 / 6%);
+
+  // Warning
+  --color-bg-warning-base: #ffd400;
+  --color-bg-warning-soft: rgb(255 212 0 / 14%);
+  --color-bg-warning-softest: rgb(255 212 0 / 6%);
+
+  // Success
+  --color-bg-success-base: var(--color-twitter-repost);
+  --color-bg-success-soft: rgb(0 186 124 / 14%);
+  --color-bg-success-softest: rgb(0 186 124 / 6%);
+
+  /* BORDER */
+  --color-border-primary: var(--color-twitter-divider);
+  --color-border-brand: var(--color-twitter-blue);
+  --color-border-brand-soft: rgb(29 155 240 / 40%);
+  --color-border-error: #f4212e;
+  --color-border-error-soft: rgb(244 33 46 / 40%);
+  --color-border-warning-soft: rgb(255 212 0 / 40%);
+  --color-border-success-soft: rgb(0 186 124 / 40%);
+  --color-border-media: rgb(255 255 255 / 15%);
+
+  /* SHADOW */
+  --shadow-strength-primary: 40%;
+  --color-shadow-primary: rgb(0 0 0 / 55%);
+  --dropdown-shadow:
+    0 0 15px rgb(0 0 0 / 30%),
+    0 0 3px 1px rgb(0 0 0 / 15%);
+  --overlay-icon-shadow: drop-shadow(0 0 4px rgb(0 0 0 / 50%));
+
+  /* RICH TEXT */
+  --rich-text-container-color: rgb(29 155 240 / 14%);
+  --rich-text-text-color: #f7f9f9;
+  --rich-text-decorations-color: rgb(29 155 240 / 30%);
+}
+
+// 강제로 dark 색상 스킴
+html {
+  color-scheme: dark;
+}

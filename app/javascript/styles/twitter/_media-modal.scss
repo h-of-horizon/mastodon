@@ -1,0 +1,164 @@
+// =============================================================================
+//  Twitter Theme — Media Modal (이미지/비디오 라이트박스)
+//  - 미디어 자체에 16px 라운드 (트위터는 미디어 카드 일관성을 라이트박스에서도 유지)
+//  - 닫기 / 다음 / 이전 버튼: pill + 살짝 어두운 backdrop (가독성)
+//  - 페이지 도트 / 캡션 footer 정돈
+//  - 영상 모달도 동일 라운드
+// =============================================================================
+
+// ----------------------------------------------------------
+//  1) 모달 컨테이너 자체 — 배경 dim
+// ----------------------------------------------------------
+.modal-root__modal.media-modal,
+.modal-root__modal.video-modal {
+  background: transparent;
+}
+
+// ----------------------------------------------------------
+//  2) 이미지 (.zoomable-image) — 라운드 모서리
+// ----------------------------------------------------------
+.zoomable-image {
+  img,
+  canvas {
+    border-radius: 16px;
+    box-shadow: 0 8px 28px rgb(0 0 0 / 25%);
+    background: var(--color-bg-primary);
+  }
+}
+
+// ----------------------------------------------------------
+//  3) 비디오/오디오 모달 — 라운드 모서리
+// ----------------------------------------------------------
+.video-modal .video-player,
+.video-modal .video-player video {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 28px rgb(0 0 0 / 25%);
+}
+
+.audio-modal__container .audio-player {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+// ----------------------------------------------------------
+//  4) 우상단 버튼 묶음 (.media-modal__buttons)
+//     닫기 / 더보기 등 — pill + 반투명 backdrop
+// ----------------------------------------------------------
+.media-modal__buttons {
+  inset-inline-end: 16px;
+  top: 16px;
+  gap: 6px;
+
+  .icon-button {
+    width: 36px;
+    height: 36px;
+    border-radius: 9999px;
+    background: rgb(15 20 25 / 60%);
+    backdrop-filter: blur(8px) saturate(180%);
+    transition:
+      background-color 0.12s ease,
+      transform 0.12s ease;
+
+    --default-icon-color: #fff;
+    --default-bg-color: rgb(15 20 25 / 60%);
+    --hover-icon-color: #fff;
+    --hover-bg-color: rgb(15 20 25 / 80%);
+
+    &:hover,
+    &:focus {
+      transform: scale(1.05);
+    }
+
+    .icon {
+      width: 20px;
+      height: 20px;
+      filter: none;
+    }
+  }
+}
+
+// ----------------------------------------------------------
+//  5) 좌우 네비게이션 (.media-modal__nav)
+//     트위터 라이트박스는 큰 흰 화살표가 좌우 가운데 pill 위에 떠 있음.
+// ----------------------------------------------------------
+.media-modal__nav {
+  padding: 0;
+  height: auto;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%) scaleX(var(--text-x-direction));
+
+  .icon {
+    width: 30px;
+    height: 30px;
+    padding: 12px;
+    margin: 0 16px;
+    border-radius: 9999px;
+    background: rgb(15 20 25 / 60%);
+    backdrop-filter: blur(8px) saturate(180%);
+    color: #fff;
+    transition: background-color 0.12s ease;
+  }
+
+  &:hover .icon,
+  &:focus .icon,
+  &:active .icon {
+    background: rgb(15 20 25 / 80%);
+  }
+}
+
+// ----------------------------------------------------------
+//  6) 페이지 도트 (.media-modal__pagination)
+// ----------------------------------------------------------
+.media-modal__pagination {
+  margin-bottom: 28px;
+  gap: 4px;
+}
+
+.media-modal__page-dot {
+  width: 7px;
+  height: 7px;
+  background-color: rgb(255 255 255 / 50%);
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+
+  &.active {
+    background-color: #fff;
+    transform: scale(1.15);
+  }
+}
+
+// ----------------------------------------------------------
+//  7) 캡션 / 액션 footer (.media-modal__overlay .picture-in-picture__footer)
+//     - 흰 텍스트, 옅은 backdrop, 좌우 padding
+// ----------------------------------------------------------
+.media-modal__overlay {
+  max-width: 720px;
+  padding-bottom: 16px;
+
+  .picture-in-picture__footer {
+    padding: 12px 16px;
+    border-radius: 16px;
+    background: rgb(15 20 25 / 60%);
+    backdrop-filter: blur(8px) saturate(180%);
+    margin: 0 12px;
+
+    .icon-button {
+      border-radius: 9999px;
+
+      --default-icon-color: #fff;
+      --hover-icon-color: #fff;
+      --hover-bg-color: rgb(255 255 255 / 10%);
+    }
+  }
+}
+
+// ----------------------------------------------------------
+//  8) 모달 dim 깊이 살짝 강화 (다크 변형도 동일하게 보이도록)
+// ----------------------------------------------------------
+.modal-root__overlay {
+  background: rgb(0 0 0 / 75%);
+  backdrop-filter: blur(2px);
+}

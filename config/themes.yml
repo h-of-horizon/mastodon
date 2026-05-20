@@ -1,1 +1,4 @@
 default: styles/application.scss
+twitter-light: styles/twitter-light.scss
+twitter-dark: styles/twitter-dark.scss
+twitter-dim: styles/twitter-dim.scss

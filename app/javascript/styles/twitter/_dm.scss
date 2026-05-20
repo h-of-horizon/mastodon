@@ -1,0 +1,112 @@
+// =============================================================================
+//  Twitter Theme — DM 분리 UI 튜닝
+//
+//  업스트림(default 테마)이 .status-direct / .notification-direct 에
+//  강한 주황 배경 + 두꺼운 좌측 보더(!important)를 박아 둡니다.
+//  트위터 톤에서는 같은 의미(DM 표시)를 유지하되:
+//   - 배경은 더 옅게 (라이트/다크 변형별 토큰으로)
+//   - 좌측 보더는 3px, RTL-safe (border-inline-start)
+//   - 멘션 알림의 .notification-is-direct / .notification__dm-badge 스타일링
+//
+//  업스트림 !important 위에 덮어쓰기 위해 importance + specificity 모두 끌어올림.
+// =============================================================================
+
+// ----------------------------------------------------------
+//  1) 타임라인의 DM 게시글 (.status-direct)
+// ----------------------------------------------------------
+html .status-direct,
+.scrollable .status-direct {
+  background-color: var(--color-twitter-dm-bg) !important;
+  border-inline-start: 3px solid var(--color-twitter-dm-border) !important;
+
+  // 업스트림이 border-left:4px를 박았어도 inline-start가 우선 적용되도록
+  // 별도 border-left 해제는 동일 specificity에서는 어려우니
+  // 우선순위가 동일한 환경(LTR)에선 border-inline-start 가 border-left와 동치라
+  // 시각적으로 우리 값이 적용됨. RTL에서도 inline-start가 우측이 되어 정상.
+  border-left-width: 3px !important;
+  border-left-color: var(--color-twitter-dm-border) !important;
+  border-left-style: solid !important;
+
+  transition: background-color 0.12s ease;
+
+  &:hover {
+    background-color: color-mix(
+      in srgb,
+      var(--color-twitter-dm-bg),
+      var(--color-bg-overlay-highlight)
+    ) !important;
+  }
+
+  // 본문 안쪽 링크/멘션은 그대로 트위터 블루 유지
+  .status__content a {
+    color: var(--color-text-brand);
+  }
+}
+
+// ----------------------------------------------------------
+//  2) 알림 목록의 DM 알림 (.notification-direct, .notification-is-direct)
+//     - .notification-direct: 업스트림이 정의한 배경(주황 10%) + dashed border
+//     - .notification-is-direct: renderMention 안에서 DM 멘션을 감싸는 wrapper
+// ----------------------------------------------------------
+html .notification-direct,
+html .notification-is-direct,
+.scrollable .notification-direct,
+.scrollable .notification-is-direct {
+  background-color: var(--color-twitter-dm-bg) !important;
+  border-inline-start: 3px dashed var(--color-twitter-dm-border) !important;
+  border-left-width: 3px !important;
+  border-left-style: dashed !important;
+  border-left-color: var(--color-twitter-dm-border) !important;
+  border-bottom: 1px solid var(--color-border-primary);
+  position: relative;
+
+  &:hover {
+    background-color: color-mix(
+      in srgb,
+      var(--color-twitter-dm-bg),
+      var(--color-bg-overlay-highlight)
+    ) !important;
+  }
+}
+
+// ----------------------------------------------------------
+//  3) DM 배지 (.notification__dm-badge)
+//     renderMention 안에서 "다이렉트 메시지(DM)" 텍스트로 렌더됨.
+//     알림 본문 위에 작은 칩 형태로 띄움.
+// ----------------------------------------------------------
+.notification__dm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 16px 0;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: var(--color-twitter-dm-badge-bg);
+  color: var(--color-twitter-dm-badge-text);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  line-height: 1.4;
+  width: fit-content;
+
+  // 작은 점 ● 으로 시각 시그널
+  &::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-twitter-dm-accent);
+    flex-shrink: 0;
+  }
+}
+
+// DM 알림 wrapper 안에 들어있는 status는 좌측 들여쓰기 때문에 살짝 보정
+.notification-is-direct {
+  padding-bottom: 4px;
+
+  // 배지 바로 아래 status는 위쪽 padding 제거 (배지와 자연스럽게 이어지도록)
+  .status {
+    padding-top: 8px;
+  }
+}
