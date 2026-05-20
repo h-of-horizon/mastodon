@@ -30,8 +30,9 @@
 @use 'mastodon/rich_text';
 
 // --- 트위터 다크 오버라이드 레이어 ---
-@use 'twitter/tokens-dark'; // 변형별
-@use 'twitter/typography'; // 공유
-@use 'twitter/components'; // 공유
-@use 'twitter/dm'; // 공유
-@use 'twitter/media-modal'; // 공유
+// `mastodon/components` 등과의 네임스페이스 충돌을 피하려 `as twitter-...` 별칭.
+@use 'twitter/tokens-dark' as twitter-tokens; // 변형별
+@use 'twitter/typography' as twitter-typography; // 공유
+@use 'twitter/components' as twitter-components; // 공유
+@use 'twitter/dm' as twitter-dm; // 공유
+@use 'twitter/media-modal' as twitter-media-modal; // 공유

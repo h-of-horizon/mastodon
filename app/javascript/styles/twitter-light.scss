@@ -35,8 +35,11 @@
 @use 'mastodon/rich_text';
 
 // --- 2) 트위터 라이트 오버라이드 레이어 ---
-@use 'twitter/tokens-light'; // 변형별
-@use 'twitter/typography'; // 공유
-@use 'twitter/components'; // 공유
-@use 'twitter/dm'; // 공유 (DM 분리 UI 튜닝)
-@use 'twitter/media-modal'; // 공유 (미디어 모달 라운드)
+// 마스토돈 본가가 이미 `mastodon/components`, `mastodon/variables` 등
+// 같은 마지막 세그먼트로 네임스페이스를 차지하고 있어
+// 충돌을 피하려 `as twitter-...` 별칭을 명시.
+@use 'twitter/tokens-light' as twitter-tokens; // 변형별
+@use 'twitter/typography' as twitter-typography; // 공유
+@use 'twitter/components' as twitter-components; // 공유
+@use 'twitter/dm' as twitter-dm; // 공유 (DM 분리 UI 튜닝)
+@use 'twitter/media-modal' as twitter-media-modal; // 공유 (미디어 모달 라운드)
