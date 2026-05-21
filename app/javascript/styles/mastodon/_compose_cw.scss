@@ -1,0 +1,173 @@
+// =============================================================================
+//  CW (열람 주의) 셀렉트박스 — 4개 테마 공통 스타일
+//
+//  Default(Mastodon) + Twitter Light/Dark/Dim 모두에서 동일하게 적용.
+//  --color-text-brand 등 표준 토큰만 사용 — twitter 전용 토큰 의존 X.
+//
+//  설계 원칙:
+//   • 네이티브 <select> chrome 100% 제거 (appearance: none + 커스텀 chevron)
+//   • select 와 "기타" 입력창 동일 높이/폰트/패딩 — 크기 들쑥날쑥 방지
+//   • 좌측 3px amber 액센트만 — warning 시그널 유지하며 깔끔
+//   • 모든 색은 CSS var 기반 — 다크/라이트 자동 적응
+// =============================================================================
+
+// Container — 좌측 amber 표시 한 줄만 (배경 tint 없음)
+.spoiler-input.spoiler-input--cw {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 0;
+  border-inline-start: 3px solid #f59e0b; // amber 500 — warning 시그널
+  padding: 6px 0 6px 12px;
+  margin: 4px 0;
+}
+
+// ============================================================================
+//  공통: select 와 기타-입력창 동일 형태 강제 (크기 균일성)
+// ============================================================================
+$cw-control-height: 34px;
+$cw-control-font: 13px;
+$cw-control-radius: 9999px;
+
+// Native <select> 완전 커스텀 — !important 없이 specificity 로만 승부
+.spoiler-input.spoiler-input--cw .spoiler-input__select {
+  // 네이티브 chrome 완전 제거 (벤더 prefix 포함)
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  // 커스텀 chevron — currentColor 기반이라 다크/라이트 자동
+  background-color: var(--color-bg-tertiary);
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10' fill='none'><path d='M2 4l3 3 3-3' stroke='%23536471' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 10px 10px;
+
+  // 동일 형태 강제
+  height: $cw-control-height;
+  min-height: $cw-control-height;
+  padding: 0 32px 0 14px;
+  border: 0;
+  border-radius: $cw-control-radius;
+
+  // 타이포 — 다른 compose chip 과 통일
+  font-family: inherit;
+  font-size: $cw-control-font;
+  font-weight: 600;
+  line-height: $cw-control-height;
+  letter-spacing: -0.005em;
+  color: var(--color-text-primary);
+
+  cursor: pointer;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  outline: 0;
+
+  // 다크 모드 native option panel 자동 적응
+  color-scheme: light dark;
+
+  transition: background-color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background-color: var(--color-bg-secondary);
+  }
+
+  &:focus {
+    outline: 0;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-text-brand);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  // Firefox dotted inner focus
+  &::-moz-focus-inner {
+    border: 0;
+  }
+
+  // IE/Edge 옛날 호환 — arrow 제거
+  &::-ms-expand {
+    display: none;
+  }
+}
+
+// "기타" 모드에서만 노출되는 직접 입력 컨테이너 — select와 동일 형태
+.spoiler-input.spoiler-input--cw .spoiler-input__custom {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+
+  // AutosuggestInput 컨테이너 — pill 형태 (select와 동일 radius/height)
+  .autosuggest-input {
+    flex: 1 1 auto;
+    background: var(--color-bg-tertiary);
+    border: 0;
+    border-radius: $cw-control-radius;
+    height: $cw-control-height;
+    min-height: $cw-control-height;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    box-sizing: border-box;
+    transition:
+      background-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  // 실제 input 요소 — base의 .spoiler-input__input 룰을 모두 덮어씀
+  // (base mastodon 의 padding/bg/color/font-size 무력화)
+  input.spoiler-input__input,
+  .spoiler-input__input {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--color-text-primary);
+    padding: 0 14px;
+    font-family: inherit;
+    font-size: $cw-control-font;
+    font-weight: 500;
+    line-height: $cw-control-height;
+    letter-spacing: -0.003em;
+    box-sizing: border-box;
+
+    &::placeholder {
+      color: var(--color-text-secondary);
+      opacity: 1;
+    }
+
+    &:focus {
+      outline: 0;
+    }
+  }
+
+  // 포커스 시 brand color outline
+  &:focus-within .autosuggest-input {
+    background: var(--color-bg-secondary);
+    box-shadow: inset 0 0 0 1.5px var(--color-text-brand);
+  }
+}
+
+// ============================================================================
+//  base Mastodon 의 .spoiler-input__input 룰이 다른 곳에서 select 에 영향
+//  미치지 않도록 명시적으로 select 는 그 룰 적용 안 받게 격리
+// ============================================================================
+select.spoiler-input__select {
+  // base 의 .autosuggest-textarea__textarea, .spoiler-input__input 공동 룰
+  // (font-size 14px / padding 12px / display block / bg transparent 등)이
+  // select 에 적용되지 않도록 위 .spoiler-input.spoiler-input--cw 셀렉터로
+  // 가져와 specificity (0,0,3,0 vs 0,0,2,0) 로 무력화. 별도 처리 불필요.
+
+  // 단, 일부 브라우저(특히 Safari)가 select 의 background-image 를
+  // 무시하지 않도록 명시적으로 옵션 노이즈 제거
+  text-indent: 0;
+}

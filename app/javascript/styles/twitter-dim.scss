@@ -36,3 +36,4 @@
 @use 'twitter/components' as twitter-components; // 공유
 @use 'twitter/dm' as twitter-dm; // 공유
 @use 'twitter/media-modal' as twitter-media-modal; // 공유
+@use 'mastodon/compose_cw' as compose-cw; // CW 셀렉트박스 (default 와 공통)

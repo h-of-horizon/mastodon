@@ -32,3 +32,7 @@
 // 반드시 'mastodon/theme' 이후에 위치해야 동일 specificity 에서 cascade로 이김.
 // twitter-light/dark/dim 진입점에는 이 파일을 import 하지 않으므로 영향 없음.
 @use 'mastodon/accent_default' as accent;
+
+// CW(열람 주의) 셀렉트박스 공통 스타일 — 4개 테마(default/twitter-*)가 공유.
+// 반드시 'mastodon/components' 이후에 위치해야 native select chrome 룰을 이김.
+@use 'mastodon/compose_cw' as compose-cw;

@@ -337,109 +337,9 @@
   }
 }
 
-// ----------------------------------------------------------
-//  6-1) CW(열람 주의) 셀렉트박스 — 깔끔한 pill 형
-//       기존 compose dropdown(privacy/language)과 시각적으로 통일.
-//       강조 표시는 좌측 3px 얇은 amber 액센트 하나만 (warning 시그널 유지).
-//       배경/보더 과잉 제거 — 자연스럽게 작성창의 일부처럼 보이도록.
-// ----------------------------------------------------------
-.spoiler-input.spoiler-input--cw {
-  align-items: center;
-  gap: 8px;
-  background: transparent;
-  border: 0;
-  border-inline-start: 3px solid #f59e0b; // 단일 amber 액센트 (warning)
-  padding: 6px 0 6px 12px;
-  margin: 4px 0;
-}
-
-// Native <select> 커스텀 — appearance:none, pill, 작성 칩과 같은 톤
-.spoiler-input__select {
-  appearance: none;
-  background-color: var(--color-bg-tertiary);
-  background-image:
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M6 8.5L1.7 4.2l1-1L6 6.5l3.3-3.3 1 1z' fill='%23536471'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 10px 10px;
-  padding: 7px 30px 7px 14px;
-  border: 0;
-  border-radius: 9999px;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.005em;
-  color: var(--color-text-primary);
-  cursor: pointer;
-  flex: 0 0 auto;
-  line-height: 1.2;
-  // 다크/딤 OS native option panel 자동 적응
-  color-scheme: light dark;
-  transition: background-color 0.15s ease;
-
-  &:hover:not(:disabled) {
-    background-color: var(--color-bg-secondary);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--color-text-brand);
-    outline-offset: 2px;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  &::-moz-focus-inner {
-    border: 0;
-  }
-}
-
-// "기타" 선택 시에만 노출되는 직접 입력 컨테이너 — select와 같은 형태
-.spoiler-input__custom {
-  flex: 1 1 auto;
-  min-width: 0;
-  position: relative;
-  display: flex;
-  align-items: stretch;
-
-  .autosuggest-input {
-    flex: 1 1 auto;
-    background: var(--color-bg-tertiary);
-    border: 0;
-    border-radius: 9999px;
-    overflow: hidden;
-    transition:
-      background-color 0.15s ease,
-      box-shadow 0.15s ease;
-  }
-
-  .spoiler-input__input {
-    border: 0;
-    background: transparent;
-    color: var(--color-text-primary);
-    padding: 7px 14px;
-    font-size: 13.5px;
-    line-height: 1.4;
-    letter-spacing: -0.003em;
-
-    &::placeholder {
-      color: var(--color-text-secondary);
-      opacity: 1;
-    }
-
-    &:focus {
-      outline: 0;
-    }
-  }
-
-  // 포커스 시 입력칸이 활성화된 느낌
-  &:focus-within .autosuggest-input {
-    background: var(--color-bg-secondary);
-    box-shadow: inset 0 0 0 1.5px var(--color-text-brand);
-  }
-}
+// 6-1) CW 셀렉트박스 → 공통 모듈 'mastodon/compose_cw' 로 이전.
+//      4개 테마 모두 application.scss / twitter-light/dark/dim.scss 에서
+//      @use 'mastodon/compose_cw' as compose-cw; 로 임포트.
 
 // ----------------------------------------------------------
 //  7) Account header (프로필 헤더) — 트위터 룩
@@ -1136,13 +1036,23 @@ html.custom-scrollbars *::-webkit-scrollbar-thumb {
   position: relative;
 }
 
-// 상세 화면에서는 어떤 경우에도 collapse 적용 X — 무조건 전문 노출
+// 상세 화면에서는 어떤 경우에도 collapse 적용 X — 무조건 전문 노출.
+// (#5) 타래의 부모/답글(.status--in-thread)도 동일하게 전문 노출 —
+//      사용자가 멘션 답글 작성 시 원본 맥락 전체를 볼 수 있도록.
 .detailed-status .status__content,
-.detailed-status .status__content.status__content--collapsed {
+.detailed-status .status__content.status__content--collapsed,
+.status--in-thread .status__content,
+.status--in-thread .status__content.status__content--collapsed {
   max-height: none;
   mask-image: none;
   -webkit-mask-image: none;
   overflow: visible;
+}
+
+// 타래 상세에서는 '더보기' 버튼도 노출 불필요 (이미 전문 보임)
+.detailed-status .status__content__read-more-button,
+.status--in-thread .status__content__read-more-button {
+  display: none;
 }
 
 // '더보기' 버튼 — 본문과 호흡 맞춤 + 위로 살짝 띄움 (페이드 영역 침범 안 함)
