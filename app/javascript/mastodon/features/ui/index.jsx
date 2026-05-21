@@ -230,6 +230,15 @@ class SwitchingColumnsArea extends PureComponent {
             <WrappedRoute path='/profile/edit' component={AccountEdit} content={children} />
             <WrappedRoute path='/profile/featured_tags' component={AccountEditFeaturedTags} content={children} />
 
+            {/* 방어: 레거시 /@@notice 같은 더블 @ URL 을 /@notice 로 자동 리다이렉트.
+                Account.acct 의 leading @ 는 모델 정규화에서 strip 하므로 새로 생성되는
+                URL 은 항상 '/@user' 형태지만, 외부 링크/북마크/기존 URL 대비 보호. */}
+            <Route
+              path='/@@:rest(.*)'
+              render={({ match, location }) => (
+                <Redirect to={{ pathname: `/@${match.params.rest}`, search: location.search, hash: location.hash }} />
+              )}
+            />
             <WrappedRoute path={['/@:acct', '/accounts/:id']} exact component={AccountTimeline} content={children} />
             <WrappedRoute path={['/@:acct/featured', '/accounts/:id/featured']} component={AccountFeatured} content={children} />
             {areCollectionsEnabled() &&

@@ -290,9 +290,10 @@
 
 // ----------------------------------------------------------
 //  6) Compose form — 트위터식 작성창
+//     (D-3) padding 16 → 12 로 줄여 좁은 패널 활용도 ↑
 // ----------------------------------------------------------
 .compose-form {
-  padding: 12px 16px;
+  padding: 8px 12px;
 
   .compose-form__highlightable {
     border: 0;
@@ -305,13 +306,126 @@
   .compose-form__buttons-wrapper {
     background: transparent;
     border-top: 0;
-    padding-top: 8px;
+    padding-top: 6px;
+
+    // (D-7) 카운터 + 액션 버튼 줄에서 카운터가 줄바꿈 안 되도록
+    .character-counter__wrapper,
+    .character-counter {
+      flex-shrink: 0;
+    }
   }
 
-  // 카운터 — 트위터처럼 작고 라이트
+  // (D-7) 카운터 — 트위터처럼 작고 라이트, tabular-nums 로 자릿수 정렬
   .character-counter {
     color: var(--color-text-secondary);
     font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+  }
+
+  // (D-5) compose 내부 dropdowns — 작은 폰트에 자간 조금 완화
+  .compose-form__dropdowns {
+    gap: 6px;
+    margin: 6px 2px;
+
+    .privacy-dropdown__value,
+    .language-dropdown__value,
+    .privacy-dropdown button,
+    .language-dropdown button {
+      letter-spacing: -0.002em;
+      font-size: 13px;
+    }
+  }
+}
+
+// ----------------------------------------------------------
+//  6-1) CW(열람 주의) 셀렉트박스 — Twitter/X 스타일 두 색 보더
+//       워닝 스트라이프 SVG 대신 깔끔한 amber 두 색 보더 + 옅은 배경
+//       기존 .spoiler-input 의 display:flex / align-items:stretch 는 상속
+// ----------------------------------------------------------
+.spoiler-input.spoiler-input--cw {
+  gap: 8px;
+  align-items: center;
+  background-color: rgb(251 191 36 / 8%);
+  border-inline-start: 4px solid #fbbf24; // amber 400 — saturated warning
+  border-inline-end: 4px solid #f59e0b; // amber 500 — complementary
+  padding: 8px 10px;
+  margin: 2px 0;
+  transition: background-color 0.18s ease;
+}
+
+// Native <select> 커스텀 — appearance:none + 커스텀 chevron + pill 라운드
+.spoiler-input__select {
+  appearance: none;
+  background-color: var(--color-bg-primary);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M6 8.5L1.7 4.2l1-1L6 6.5l3.3-3.3 1 1z' fill='currentColor'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px 12px;
+  padding: 6px 28px 6px 12px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 9999px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  flex: 0 0 auto;
+  min-width: 110px;
+  min-height: 30px;
+  // 다크/딤에서 native option panel 일관성
+  color-scheme: light dark;
+
+  &:hover:not(:disabled) {
+    background-color: var(--color-bg-tertiary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-twitter-blue);
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  // Firefox: dotted inner focus 제거
+  &::-moz-focus-inner {
+    border: 0;
+  }
+}
+
+// "기타" 선택 시에만 노출되는 직접 입력 컨테이너
+.spoiler-input__custom {
+  flex: 1 1 auto;
+  min-width: 0;
+  position: relative;
+
+  .autosuggest-input {
+    border: 1px solid var(--color-border-primary);
+    border-radius: 9999px;
+    background: var(--color-bg-primary);
+    overflow: hidden;
+  }
+
+  .spoiler-input__input {
+    border: 0;
+    background: transparent;
+    color: var(--color-text-primary);
+    padding: 6px 14px;
+    font-size: 14px;
+    line-height: 1.5;
+
+    &:focus {
+      outline: 0;
+    }
+  }
+
+  // AutosuggestInput 컨테이너 자체에 focus-within 시 보더 강조
+  &:focus-within .autosuggest-input {
+    border-color: var(--color-twitter-blue);
+    box-shadow: 0 0 0 1px var(--color-twitter-blue);
   }
 }
 
@@ -452,4 +566,527 @@ html.custom-scrollbars *::-webkit-scrollbar-thumb {
 :where(a, button, input, textarea, select, [tabindex]):focus-visible {
   outline: 2px solid var(--color-twitter-blue);
   outline-offset: 2px;
+}
+
+// =============================================================================
+// 14) Long-form Korean Reading & Image Comfort Audit Fixes
+//     (C1~C6, I1~I8, P1~P7 — 책처럼 읽히는 인스턴스 목표)
+// =============================================================================
+
+// ----------------------------------------------------------
+// C1: Media gallery gap — 한국 SNS 감각의 4-6px gutter
+// ----------------------------------------------------------
+.media-gallery {
+  gap: 4px;
+
+  @media (min-width: 631px) {
+    gap: 6px;
+  }
+}
+
+// ----------------------------------------------------------
+// C2: Gallery 외곽 16px 라운드와 내부 아이템 라운드 일치
+//     base는 item 8px / 컨테이너 8px → 우리는 16px 통일
+// ----------------------------------------------------------
+.media-gallery {
+  border-radius: 16px;
+}
+
+.media-gallery__item {
+  border-radius: 16px;
+
+  // base의 outline(--color-border-media)이 가운데 사진을 옅게 둘러싸
+  // 흰 보더처럼 보이는 부분 제거 — 트위터 룩은 깔끔
+  outline: 0;
+  outline-offset: 0;
+}
+
+// 1장: 외곽 16px 유지 (위 규칙으로 자동)
+
+// 2장: 가운데 만나는 inner 코너만 0 (base 규칙 유지 + 외곽은 16px)
+.media-gallery--layout-2 > .media-gallery__item {
+  &:nth-child(1) {
+    border-start-start-radius: 16px;
+    border-end-start-radius: 16px;
+  }
+
+  &:nth-child(2) {
+    border-start-end-radius: 16px;
+    border-end-end-radius: 16px;
+  }
+}
+
+// 3장: 좌측은 세로로 길고, 우측 상단/하단
+.media-gallery--layout-3 > .media-gallery__item {
+  &:nth-child(1) {
+    border-start-start-radius: 16px;
+    border-end-start-radius: 16px;
+  }
+
+  &:nth-child(2) {
+    border-start-end-radius: 16px;
+  }
+
+  &:nth-child(3) {
+    border-end-end-radius: 16px;
+  }
+}
+
+// 4장: 각 모서리만 16px
+.media-gallery--layout-4 > .media-gallery__item {
+  &:nth-child(1) {
+    border-start-start-radius: 16px;
+  }
+
+  &:nth-child(2) {
+    border-start-end-radius: 16px;
+  }
+
+  &:nth-child(3) {
+    border-end-start-radius: 16px;
+  }
+
+  &:nth-child(4) {
+    border-end-end-radius: 16px;
+  }
+}
+
+// ----------------------------------------------------------
+// C3: Quote post body 가독성
+//     base의 line-clamp:4 + line-height:20px → 책처럼 읽기엔 짧음
+//     letter-spacing: 0.25px (양수!) — Korean 본문과 정반대
+// ----------------------------------------------------------
+.status__quote .status__content {
+  -webkit-line-clamp: 6;
+  line-clamp: 6;
+  letter-spacing: -0.003em;
+
+  p {
+    // base는 margin-bottom: 20px — 짧은 인용에서 과함
+    margin-bottom: 0.6em;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+// ----------------------------------------------------------
+// C4: 상세 본문 최대 가로 폭 68ch (한글 sweet spot)
+//     1ch ≈ '0' 글자 폭. palt 활성 한글은 1ch와 거의 동일.
+//     멀티컬럼/단일컬럼 어디서든 본문이 너무 넓게 펼쳐지지 않도록
+// ----------------------------------------------------------
+.detailed-status .status__content,
+.detailed-status .status__content__text {
+  max-width: 68ch;
+}
+
+// 미디어/카드는 max-width 제한 없이 컨테이너 폭 그대로 사용 — 본문만 제한
+.detailed-status .media-gallery,
+.detailed-status .video-player,
+.detailed-status .audio-player,
+.detailed-status .status-card,
+.detailed-status .collection-preview {
+  max-width: none;
+}
+
+// ----------------------------------------------------------
+// C5: cursor:pointer를 본문 텍스트에서 제거
+//     drag-select 복사 시 cursor 시각 일관성 유지
+// ----------------------------------------------------------
+.status {
+  cursor: auto;
+
+  &:hover {
+    cursor: auto; // 위 .status > &:hover { cursor: pointer } 오버라이드
+  }
+}
+
+.status .status__content,
+.status .status__content__text {
+  cursor: text;
+}
+
+.status .display-name,
+.status .display-name__html,
+.status .display-name__account,
+.status .status__action-bar,
+.status .status__relative-time,
+.status .status-card,
+.status .media-gallery,
+.status .video-player,
+.status .audio-player {
+  cursor: pointer;
+}
+
+// ----------------------------------------------------------
+// C6: detailed-status vertical rhythm 16px baseline 통일
+// ----------------------------------------------------------
+.detailed-status .status__content {
+  margin-top: 16px;
+  margin-bottom: 16px;
+}
+
+// content-warning 있을 때도 동일 16px
+.detailed-status .content-warning {
+  margin-bottom: 16px;
+}
+
+// ----------------------------------------------------------
+// I1: Status card title/description 2-line clamp + keep-all
+//     한글 뉴스 제목은 길어서 1줄 nowrap 으로는 거의 모두 잘림
+// ----------------------------------------------------------
+.status-card__title {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  font-size: 17px; // base 19 → 17 (좁은 패널 가독)
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+
+.status-card__description {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-height: 1.5;
+}
+
+// host / author는 1줄 ellipsis 유지 — 의미 있음
+.status-card__host,
+.status-card__author {
+  letter-spacing: -0.005em;
+}
+
+// ----------------------------------------------------------
+// I2: 프로필 커스텀 필드 wrap 허용 + keep-all
+// ----------------------------------------------------------
+.account-fields dl dd,
+.account__header__fields dd {
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  line-height: 1.5;
+}
+
+.account-fields dl dt,
+.account__header__fields dt {
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  letter-spacing: -0.005em;
+}
+
+// ----------------------------------------------------------
+// I3: 계정 노트(자기소개) 2줄 clamp
+// ----------------------------------------------------------
+.account__note,
+.account .account__note {
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  line-height: 1.5;
+  letter-spacing: -0.005em;
+}
+
+// ----------------------------------------------------------
+// I4: 폴(설문) 가독성 — 줄높이 1.5, 게이지 바 8px, full-track
+// ----------------------------------------------------------
+.poll {
+  font-size: 14.5px;
+
+  &__option {
+    line-height: 1.5;
+    padding: 8px 0;
+    letter-spacing: -0.005em;
+
+    &__text {
+      word-break: keep-all;
+      overflow-wrap: break-word;
+    }
+  }
+
+  // 게이지 바 굵게 + 트랙 표시 (시각 비교 용이)
+  progress,
+  &__chart {
+    height: 8px;
+    border-radius: 9999px;
+  }
+
+  // 컨테이너에 옅은 트랙 (0% 옵션도 시각화)
+  &__option progress {
+    background: var(--color-bg-tertiary);
+
+    &::-webkit-progress-bar {
+      background: var(--color-bg-tertiary);
+      border-radius: 9999px;
+    }
+
+    &::-webkit-progress-value {
+      border-radius: 9999px;
+    }
+
+    &::-moz-progress-bar {
+      border-radius: 9999px;
+    }
+  }
+
+  // base의 모바일 polls input letter-spacing: 0.5px(양수) 보정
+  &__option input[type='text'] {
+    @media screen and (width <= 600px) {
+      letter-spacing: -0.003em;
+      line-height: 1.5;
+    }
+  }
+}
+
+// ----------------------------------------------------------
+// I5: CW(주의) 펼치기 — 부드러운 페이드 트랜지션
+// ----------------------------------------------------------
+.spoiler-button {
+  transition:
+    opacity 0.25s ease,
+    visibility 0.25s ease;
+
+  &--hidden {
+    // base는 display:none 으로 즉시 사라짐 → opacity 0 으로 페이드
+    display: block;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+.content-warning {
+  transition: padding 0.2s ease;
+}
+
+// ----------------------------------------------------------
+// I6: 모바일(≤630px) 상세 화면 가독성 미세 조정
+//     padding 14→12, font 17→16.5, letter-spacing 완화
+// ----------------------------------------------------------
+@media (max-width: 630px) {
+  .detailed-status {
+    padding: 14px 12px 10px;
+  }
+
+  .detailed-status .status__content,
+  .detailed-status .status__content__text {
+    font-size: 16.5px;
+    letter-spacing: -0.002em;
+    line-height: 1.5;
+    max-width: none; // 모바일에선 컨테이너 폭 그대로
+  }
+
+  // 모바일 폴 옵션 폰트도 살짝 키움 (iOS Safari zoom-in 방지 16px)
+  .poll {
+    font-size: 16px;
+  }
+}
+
+// ----------------------------------------------------------
+// I7: 해시태그 바 — 13px + 더 큰 탭 영역
+// ----------------------------------------------------------
+.hashtag-bar {
+  font-size: 13px;
+  line-height: 1.5;
+  letter-spacing: -0.005em;
+
+  a {
+    padding: 5px 12px;
+    border-radius: 9999px;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--color-bg-tertiary);
+    }
+  }
+}
+
+// ----------------------------------------------------------
+// I8: 답글 미리보기 — clamp 6, max-height 9em
+// ----------------------------------------------------------
+.reply-indicator__content {
+  -webkit-line-clamp: 6;
+  line-clamp: 6;
+  max-height: 9em;
+}
+
+// ----------------------------------------------------------
+// P1: 'palt' 와 'proportional-width' 이중 선언 정리는
+//     _typography.scss 쪽에서 처리 (font-variant-east-asian 제거)
+// ----------------------------------------------------------
+
+// ----------------------------------------------------------
+// P2: Sticky column header z-index 상승 — thread connector와 충돌 방지
+// ----------------------------------------------------------
+.column-header,
+.column-header__wrapper {
+  z-index: 3;
+}
+
+// ----------------------------------------------------------
+// P3: detailed-status meta 의 이중 border 제거
+//     base가 line별 border-bottom + 우리가 outer border-top → 중복
+// ----------------------------------------------------------
+.detailed-status__meta__line {
+  border-bottom: 0;
+
+  &:not(:last-child) {
+    // 대신 line 간 옅은 점선 구분만 (선택)
+    border-bottom: 1px solid var(--color-border-primary);
+  }
+}
+
+// ----------------------------------------------------------
+// P4: Character counter Pretendard + tabular-nums
+// ----------------------------------------------------------
+.character-counter,
+.character-counter__wrapper {
+  font-family:
+    'Pretendard Variable',
+    system-ui,
+    -apple-system,
+    blinkmacsystemfont,
+    'Segoe UI',
+    'Apple SD Gothic Neo',
+    'Malgun Gothic',
+    'mastodon-font-sans-serif',
+    sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.005em;
+}
+
+// ----------------------------------------------------------
+// P5: 알림 상대시간 — float 대신 flex margin-inline-start: auto
+//     긴 한글 디스플레이 네임과 충돌 방지
+// ----------------------------------------------------------
+.notification__relative_time {
+  float: none;
+  margin-inline-start: auto;
+  flex-shrink: 0;
+}
+
+// ----------------------------------------------------------
+// P6: empty-column-indicator (빈 타임라인) 1.5 baseline
+// ----------------------------------------------------------
+.empty-column-indicator,
+.empty-column-indicator p {
+  font-size: 15px;
+  line-height: 1.5;
+  letter-spacing: -0.005em;
+}
+
+// ----------------------------------------------------------
+// P7: 본문 안 멘션/태그 focus 시각 표시
+//     keyboard 사용자가 @사용자 어디까지 왔는지 추적 가능
+// ----------------------------------------------------------
+.status__content a.mention:focus-visible,
+.status__content a.hashtag:focus-visible,
+.reply-indicator__content a.mention:focus-visible {
+  background: var(--color-bg-brand-softest);
+  border-radius: 4px;
+  padding: 0 2px;
+  margin: 0 -2px;
+  outline-offset: 0;
+}
+
+// =============================================================================
+//  추가로 작업하며 발견한 디테일
+// =============================================================================
+
+// (a) 작성창 내부 dropdowns에서 spoiler-input 사이 vertical gap
+//     CW 토글 후 작성창 사이가 너무 붙음 — breathing room
+.compose-form .spoiler-input--cw {
+  margin-block: 4px;
+}
+
+// (b) Compose form 내부 padding 후 reply-indicator 와 본문 사이 균형
+.compose-form .reply-indicator {
+  margin-bottom: 4px;
+}
+
+// (c) Media-gallery 1장 이미지가 컨테이너 outline 안 쪽에 어두운 1px stroke을
+//     남기는 경우 — outline 제거 후 이미지 자체에 보더 처리
+.media-gallery__item img,
+.media-gallery__item video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit; // 부모 16px 라운드 상속
+}
+
+// (d) Mention/hashtag 클릭 시 active 상태에서 트위터 블루 살짝 강조
+.status__content a.mention:active,
+.status__content a.hashtag:active {
+  background: var(--color-bg-brand-soft);
+  border-radius: 4px;
+}
+
+// (e) Detailed-status 본문 안 이미지(인라인 img) 라운드 + 그림자
+.detailed-status .status__content img,
+.detailed-status .status__content video {
+  border-radius: 12px;
+  max-width: 100%;
+  height: auto;
+}
+
+// (f) 댓글 스레드 connector 라인 — 트위터 다크/딤에서 너무 진해 보임
+//     (.status__line 은 base 가 absolute pos + bg color 처리)
+.status__line {
+  background: var(--color-border-primary);
+  opacity: 0.6;
+}
+
+// (g) 본문 안 strong/em 자연스러운 강조 weight
+.status__content strong {
+  font-weight: 700;
+}
+
+.status__content em {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+// (h) sensitive content blur 강도 — 너무 약하면 미리 보이고
+//     너무 강하면 모자이크처럼 됨. 깔끔 중간값
+.media-gallery__item .spoiler-button + .media-gallery__item__thumbnail,
+.media-gallery__item--blurred img,
+.media-gallery__item--blurred video {
+  filter: blur(28px) saturate(50%);
+  transition: filter 0.3s ease;
+}
+
+// (i) 모바일에서 detailed-status display-name 줄간격
+@media (max-width: 630px) {
+  .detailed-status__display-name {
+    gap: 10px;
+  }
+
+  .detailed-status__display-name strong {
+    font-size: 15.5px;
+  }
+}
+
+// (j) 검색 결과 / suggestion list 의 계정 아이템 패딩
+.search-results__section .account,
+.account-card {
+  padding-block: 10px;
+}
+
+// (k) 상세 화면 본문이 max-width: 68ch 가 되면서 가운데 정렬 시
+//     좌측 정렬 유지 (가독성 위해)
+.detailed-status .status__content {
+  margin-inline-start: 0;
+  margin-inline-end: auto;
 }

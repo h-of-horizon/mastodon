@@ -27,3 +27,8 @@
 // 한국어 본문 가독성 튜닝(Pretendard + 자간/장평/줄높이/keep-all)을
 // default 테마에도 적용. 트위터 테마들과 동일한 모듈을 공유.
 @use 'twitter/typography' as typography;
+
+// Default 테마 전용 accent 컬러 — 마스토돈 기본 보라(indigo) → #659dad teal-gray.
+// 반드시 'mastodon/theme' 이후에 위치해야 동일 specificity 에서 cascade로 이김.
+// twitter-light/dark/dim 진입점에는 이 파일을 import 하지 않으므로 영향 없음.
+@use 'mastodon/accent_default' as accent;

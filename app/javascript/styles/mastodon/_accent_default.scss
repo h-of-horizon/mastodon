@@ -1,0 +1,79 @@
+// =============================================================================
+//  Default 테마 전용 Accent 컬러 — 마스토돈 기본 보라(indigo) → #659dad
+//
+//  마스토돈 본가의 indigo 팔레트 11단계를 #659dad (blue-gray, HSL 193° 26% 54%)
+//  를 중심으로 한 톤앤톤 스케일로 통째 치환.
+//
+//  이 파일은 styles/application.scss(default 테마 진입점)에서만 @use 됩니다.
+//  twitter-light / twitter-dark / twitter-dim 진입점은 자체 토큰을 사용하므로
+//  이 오버라이드의 영향을 전혀 받지 않습니다 — Twitter Blue 가 그대로 유지.
+//
+//  ─────────────────────────────────────────────────────────────────────────
+//  팔레트 설계 원리
+//  ─────────────────────────────────────────────────────────────────────────
+//   ・ hue 193° 고정 (#659dad 본래 색조 보존)
+//   ・ saturation 24-34% 범위 — 차분한 dusty teal 톤 유지
+//   ・ 700 슬롯에 정확히 #659dad 배치 → light 모드 브랜드 노출 색이 사용자 요청
+//     컬러와 일치 (--color-bg-brand-base, --color-text-brand 모두 indigo-700)
+//   ・ 300 슬롯은 light-medium → dark 모드 브랜드 텍스트 (indigo-300 참조)에서
+//     다크 배경 위 가독성이 좋은 옅은 teal
+//   ・ 50/100 은 거의 흰색 + teal 힌트 → 호버 배경/소프트 강조에 사용
+//   ・ 800-950 은 어두운 deep teal → 다크 모드 브랜드 soft/softest 배경에 사용
+//
+//  WCAG 노트:
+//   ・ white-on-#659dad 명도 대비 ~2.84:1 — UI 컴포넌트(non-text) 기준 OK,
+//     본문 텍스트 가독성은 아래 contrast-overrides 미사용 가정 (이용자 선호도)
+//   ・ 필요 시 사용자가 환경설정에서 '대비 강화' 활성화하면 800(#517e8d)을
+//     브랜드 base 로 사용해 white 대비 4.3:1 (AA 거의 충족) 확보
+// =============================================================================
+
+html {
+  // 본가 indigo 팔레트 슬롯 치환 (CSS 변수만 교체 — SCSS 변수는 그대로)
+  --color-indigo-50: #f1f7f9; // 거의 흰색, hint of teal
+  --color-indigo-100: #dfeaee; // 연한 wash — bg-brand-soft
+  --color-indigo-200: #c4dde4; // 연한 보더
+  --color-indigo-300: #a3c5d0; // ★ dark 모드 brand text
+  --color-indigo-400: #82adb9; // brand-on-inverted (light)
+  --color-indigo-500: #6ea3b1; // 중간 — chart accents
+  --color-indigo-600: #6ba0ae; // 살짝 라이트 (rare 호버)
+  --color-indigo-700: #659dad; // ★ 사용자 요청 — light 모드 brand
+  --color-indigo-800: #517e8d; // 다크 (호버/AA-친화 대안)
+  --color-indigo-900: #3c606e; // 더 어두운 teal — dark 모드 bg-brand-soft
+  --color-indigo-950: #25404a; // 가장 깊은 teal — dark 모드 bg-brand-softest
+}
+
+// ----------------------------------------------------------
+//  Rich text 색 토큰을 teal-gray 톤앤톤으로 (light)
+//  본가는 핑크(#ffd8e7 / #722f53 / #ffafd4) — 새 accent와 충돌하는 hue
+// ----------------------------------------------------------
+[data-color-scheme='light'],
+html:not([data-color-scheme]) {
+  --rich-text-container-color: #{rgb(241 247 249 / 100%)}; // ≈ indigo-50
+  --rich-text-text-color: #{rgb(50 86 99 / 100%)}; // dark teal-gray
+  --rich-text-decorations-color: #{rgb(163 197 208 / 100%)}; // indigo-300
+}
+
+[data-color-scheme='dark'] {
+  --rich-text-container-color: #{rgb(60 96 110 / 100%)}; // indigo-900
+  --rich-text-text-color: #{rgb(223 234 238 / 100%)}; // indigo-100 (라이트)
+  --rich-text-decorations-color: #{rgb(81 126 141 / 100%)}; // indigo-800
+}
+
+// ----------------------------------------------------------
+//  접근성 강화 모드 (data-contrast='high') 시 button base 를
+//  800 으로 한 단계 어둡게 → white 텍스트 대비 ~4.3:1 (AA 거의 충족).
+//  본가의 contrast-overrides 룰에 끼워 넣기.
+// ----------------------------------------------------------
+[data-color-scheme='light'][data-contrast='high'],
+html:not([data-color-scheme])[data-contrast='high'] {
+  --color-bg-brand-base: var(--color-indigo-800);
+  --color-bg-brand-base-hover: var(--color-indigo-900);
+  --color-text-brand: var(--color-indigo-800);
+  --color-border-brand: var(--color-indigo-800);
+}
+
+[data-color-scheme='dark'][data-contrast='high'] {
+  --color-text-brand: var(--color-indigo-200); // 더 밝게
+  --color-bg-brand-base: var(--color-indigo-600);
+  --color-bg-brand-base-hover: var(--color-indigo-500);
+}

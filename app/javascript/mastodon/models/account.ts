@@ -131,8 +131,14 @@ export function createAccountFromServerJSON(serverJSON: ApiAccountJSON) {
   const accountNote =
     accountJSON.note && accountJSON.note !== '<p></p>' ? accountJSON.note : '';
 
+  // 방어적: 서버에서 acct 가 '@notice' 처럼 leading '@' 가 붙어 내려오는 경우
+  // URL(`/@${acct}` → `/@@notice`), display(`@${acct}` → `@@notice`) 등이
+  // 모두 깨지므로 정규화의 단일 진입 지점에서 한 번에 strip.
+  const cleanedAcct = accountJSON.acct.replace(/^@+/, '');
+
   return AccountFactory({
     ...accountJSON,
+    acct: cleanedAcct,
     moved: moved?.id,
     fields: ImmutableList(
       serverJSON.fields.map((field) => createAccountField(field)),

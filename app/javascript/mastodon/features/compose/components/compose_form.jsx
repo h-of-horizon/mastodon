@@ -285,28 +285,25 @@ render () {
             <LanguageDropdown />
           </div>
 
-          {/* 👇 [수정 3] 여기서부터 셀렉트 박스 UI가 적용되는 부분입니다. 기존 AutosuggestInput을 대체합니다. */}
+          {/* CW(열람 주의) 셀렉트 박스 — Twitter/X 스타일 두 색 보더, "기타" 선택 시에만 입력창 노출 */}
           {spoiler && (
-            <div className='spoiler-input' style={{ display: 'flex', gap: '8px' }}>
+            <div className={classNames('spoiler-input', 'spoiler-input--cw', { 'spoiler-input--with-custom': currentCWCategory === '기타' })}>
               <select
-                className='spoiler-input__input'
+                className='spoiler-input__select'
                 value={currentCWCategory}
                 onChange={this.handleCWCategoryChange}
-                style={{ 
-                  flex: currentCWCategory === '기타' ? '0 0 auto' : '1 1 auto', 
-                  width: 'auto', 
-                  cursor: 'pointer' 
-                }}
+                disabled={isSubmitting}
+                aria-label={intl.formatMessage(messages.spoiler_placeholder)}
               >
-                <option value="노출">노출</option>
-                <option value="폭력">폭력</option>
-                <option value="성행위">성행위</option>
-                <option value="언어">언어</option>
-                <option value="기타">기타(직접 입력)</option>
+                <option value='노출'>노출</option>
+                <option value='폭력'>폭력</option>
+                <option value='성행위'>성행위</option>
+                <option value='언어'>언어</option>
+                <option value='기타'>기타(직접 입력)</option>
               </select>
 
               {currentCWCategory === '기타' && (
-                <div style={{ flex: '1 1 auto', position: 'relative' }}>
+                <div className='spoiler-input__custom'>
                   <AutosuggestInput
                     placeholder={intl.formatMessage(messages.spoiler_placeholder)}
                     value={spoilerText || ''}
@@ -328,7 +325,6 @@ render () {
               )}
             </div>
           )}
-          {/* 👆 수정 3 끝 */}
 
           <AutosuggestTextarea
             ref={this.textareaRef}

@@ -66,17 +66,26 @@ textarea,
 }
 
 // ----------------------------------------------------------
+//  본문 line-height 통일 — 모든 테마 1.5 (사용자 지정)
+// ----------------------------------------------------------
+//  -> .status__content / .detailed-status / .reply-indicator__content /
+//     .compose-form / list / quote / notification 본문 모두 1.5 로 통일.
+//     헤더/디스플레이 이름은 별도(1.3) 유지.
+
+// ----------------------------------------------------------
 //  Status — 목록 카드 본문
 // ----------------------------------------------------------
 .status__content,
 .reply-indicator__content {
   font-size: 15.5px;
-  line-height: 1.55;
+  line-height: 1.5;
   letter-spacing: -0.005em;
   word-break: keep-all;
   overflow-wrap: break-word;
-  // 한글 비례 너비(palt) + 라틴/숫자 등은 그대로
-  font-variant-east-asian: proportional-width;
+  // 한글 비례 너비는 `palt` OT 피처(아래 작성창 등에서 활성)로 처리.
+  // font-variant-east-asian: proportional-width 와의 이중 선언은
+  // Chromium ≤110 에서 충돌해 fullwidth fallback 되는 케이스가 있어
+  // 본문에서는 명시하지 않음 — body 전역 font-feature-settings 가 처리.
 }
 
 // ----------------------------------------------------------
@@ -86,11 +95,11 @@ textarea,
 .detailed-status .status__content,
 .detailed-status .status__content__text {
   font-size: 18px;
-  line-height: 1.7; // 한글 장문 sweet spot
+  line-height: 1.5; // 모든 테마 통일
   letter-spacing: -0.003em; // 장문에서는 자간을 거의 안 좁힘
   word-break: keep-all;
   overflow-wrap: break-word;
-  font-variant-east-asian: proportional-width;
+  // palt (font-feature-settings) 만 사용 — proportional-width와 이중 선언 회피
   font-feature-settings:
     'palt' 1,
     'kern' 1,
@@ -109,7 +118,7 @@ textarea,
   // 리스트/인용
   ul,
   ol {
-    line-height: 1.65;
+    line-height: 1.5;
     margin: 0.6em 0 1em;
     padding-inline-start: 1.5em;
   }
@@ -196,18 +205,21 @@ h4 {
   font-variant-numeric: tabular-nums;
 }
 
-// 작성창
+// 작성창 — PC/모바일 통일 16px, line-height 1.5
+// (16px 미만으로 가면 iOS Safari 가 자동 zoom-in 해서 UX 깨짐)
 .compose-form .compose-form__highlightable .autosuggest-textarea__textarea,
 .compose-form .autosuggest-textarea__textarea {
   font-family: $twitter-font-stack;
-  font-size: 18px;
-  line-height: 1.55;
-  letter-spacing: -0.004em;
+  font-size: 16px;
+  line-height: 1.5;
+  letter-spacing: -0.003em;
   word-break: keep-all;
   overflow-wrap: break-word;
+  // 본문과 동일한 OT 피처 — palt 가 textarea 에 안 먹는 브라우저 대비 명시
   font-feature-settings:
     'palt' 1,
-    'kern' 1;
+    'kern' 1,
+    'calt' 1;
 }
 
 // CJK 언어 컨텍스트에서만 word-break/keep-all 보강
@@ -233,11 +245,13 @@ h4 {
   overflow-wrap: anywhere;
 }
 
-// (2) 답글 미리보기 / 인용 표시도 본문과 동일한 자간/줄높이
+// (2) 답글 미리보기 / 인용 표시 — 작성창과 동일한 폰트 사이즈/줄높이 (D-4)
+//     본문(15.5px) 보다 살짝 큰 16px 로 통일해 작성창과 시각적 연결
 .reply-indicator__content,
 .status__quote .status__content {
-  letter-spacing: -0.005em;
-  line-height: 1.55;
+  font-size: 16px;
+  letter-spacing: -0.003em;
+  line-height: 1.5;
   word-break: keep-all;
   overflow-wrap: break-word;
 }
@@ -247,6 +261,7 @@ h4 {
 .notification__report,
 .notification__filter-bar {
   letter-spacing: -0.005em;
+  line-height: 1.5;
   word-break: keep-all;
   overflow-wrap: break-word;
 
@@ -270,6 +285,7 @@ h4 {
 }
 
 // (6) 모바일/협폭에서 detailed-status 좌우 패딩 살짝 줄임
+//     line-height 는 데스크톱과 동일하게 1.5 유지 (사용자 지정)
 @media (max-width: 630px) {
   .detailed-status {
     padding: 14px 14px 10px;
@@ -278,7 +294,7 @@ h4 {
   .detailed-status .status__content,
   .detailed-status .status__content__text {
     font-size: 17px;
-    line-height: 1.65;
+    line-height: 1.5;
   }
 }
 

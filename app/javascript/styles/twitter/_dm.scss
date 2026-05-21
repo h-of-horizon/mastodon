@@ -101,6 +101,13 @@ html .notification-is-direct,
   }
 }
 
+// (D-6) 모바일/좁은 폭에서 배지 좌우 마진을 축소해 본문과 정렬
+@media (max-width: 630px) {
+  .notification__dm-badge {
+    margin: 10px 8px 0;
+  }
+}
+
 // DM 알림 wrapper 안에 들어있는 status는 좌측 들여쓰기 때문에 살짝 보정
 .notification-is-direct {
   padding-bottom: 4px;
