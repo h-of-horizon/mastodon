@@ -338,31 +338,32 @@
 }
 
 // ----------------------------------------------------------
-//  6-1) CW(열람 주의) 셀렉트박스 — Twitter/X 스타일 두 색 보더
-//       워닝 스트라이프 SVG 대신 깔끔한 amber 두 색 보더 + 옅은 배경
-//       기존 .spoiler-input 의 display:flex / align-items:stretch 는 상속
+//  6-1) CW(열람 주의) 셀렉트박스 — 깔끔한 pill 형
+//       기존 compose dropdown(privacy/language)과 시각적으로 통일.
+//       강조 표시는 좌측 3px 얇은 amber 액센트 하나만 (warning 시그널 유지).
+//       배경/보더 과잉 제거 — 자연스럽게 작성창의 일부처럼 보이도록.
 // ----------------------------------------------------------
 .spoiler-input.spoiler-input--cw {
-  gap: 8px;
   align-items: center;
-  background-color: rgb(251 191 36 / 8%);
-  border-inline-start: 4px solid #fbbf24; // amber 400 — saturated warning
-  border-inline-end: 4px solid #f59e0b; // amber 500 — complementary
-  padding: 8px 10px;
-  margin: 2px 0;
-  transition: background-color 0.18s ease;
+  gap: 8px;
+  background: transparent;
+  border: 0;
+  border-inline-start: 3px solid #f59e0b; // 단일 amber 액센트 (warning)
+  padding: 6px 0 6px 12px;
+  margin: 4px 0;
 }
 
-// Native <select> 커스텀 — appearance:none + 커스텀 chevron + pill 라운드
+// Native <select> 커스텀 — appearance:none, pill, 작성 칩과 같은 톤
 .spoiler-input__select {
   appearance: none;
-  background-color: var(--color-bg-primary);
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M6 8.5L1.7 4.2l1-1L6 6.5l3.3-3.3 1 1z' fill='currentColor'/></svg>");
+  background-color: var(--color-bg-tertiary);
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M6 8.5L1.7 4.2l1-1L6 6.5l3.3-3.3 1 1z' fill='%23536471'/></svg>");
   background-repeat: no-repeat;
-  background-position: right 10px center;
-  background-size: 12px 12px;
-  padding: 6px 28px 6px 12px;
-  border: 1px solid var(--color-border-primary);
+  background-position: right 12px center;
+  background-size: 10px 10px;
+  padding: 7px 30px 7px 14px;
+  border: 0;
   border-radius: 9999px;
   font-family: inherit;
   font-size: 13px;
@@ -371,18 +372,18 @@
   color: var(--color-text-primary);
   cursor: pointer;
   flex: 0 0 auto;
-  min-width: 110px;
-  min-height: 30px;
-  // 다크/딤에서 native option panel 일관성
+  line-height: 1.2;
+  // 다크/딤 OS native option panel 자동 적응
   color-scheme: light dark;
+  transition: background-color 0.15s ease;
 
   &:hover:not(:disabled) {
-    background-color: var(--color-bg-tertiary);
+    background-color: var(--color-bg-secondary);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--color-twitter-blue);
-    outline-offset: 1px;
+    outline: 2px solid var(--color-text-brand);
+    outline-offset: 2px;
   }
 
   &:disabled {
@@ -390,42 +391,53 @@
     cursor: not-allowed;
   }
 
-  // Firefox: dotted inner focus 제거
   &::-moz-focus-inner {
     border: 0;
   }
 }
 
-// "기타" 선택 시에만 노출되는 직접 입력 컨테이너
+// "기타" 선택 시에만 노출되는 직접 입력 컨테이너 — select와 같은 형태
 .spoiler-input__custom {
   flex: 1 1 auto;
   min-width: 0;
   position: relative;
+  display: flex;
+  align-items: stretch;
 
   .autosuggest-input {
-    border: 1px solid var(--color-border-primary);
+    flex: 1 1 auto;
+    background: var(--color-bg-tertiary);
+    border: 0;
     border-radius: 9999px;
-    background: var(--color-bg-primary);
     overflow: hidden;
+    transition:
+      background-color 0.15s ease,
+      box-shadow 0.15s ease;
   }
 
   .spoiler-input__input {
     border: 0;
     background: transparent;
     color: var(--color-text-primary);
-    padding: 6px 14px;
-    font-size: 14px;
-    line-height: 1.5;
+    padding: 7px 14px;
+    font-size: 13.5px;
+    line-height: 1.4;
+    letter-spacing: -0.003em;
+
+    &::placeholder {
+      color: var(--color-text-secondary);
+      opacity: 1;
+    }
 
     &:focus {
       outline: 0;
     }
   }
 
-  // AutosuggestInput 컨테이너 자체에 focus-within 시 보더 강조
+  // 포커스 시 입력칸이 활성화된 느낌
   &:focus-within .autosuggest-input {
-    border-color: var(--color-twitter-blue);
-    box-shadow: 0 0 0 1px var(--color-twitter-blue);
+    background: var(--color-bg-secondary);
+    box-shadow: inset 0 0 0 1.5px var(--color-text-brand);
   }
 }
 
@@ -757,7 +769,7 @@ html.custom-scrollbars *::-webkit-scrollbar-thumb {
   -webkit-box-orient: vertical;
   word-break: keep-all;
   overflow-wrap: break-word;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 // host / author는 1줄 ellipsis 유지 — 의미 있음
@@ -775,7 +787,7 @@ html.custom-scrollbars *::-webkit-scrollbar-thumb {
   word-break: keep-all;
   overflow-wrap: anywhere;
   text-overflow: clip;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .account-fields dl dt,
@@ -793,7 +805,7 @@ html.custom-scrollbars *::-webkit-scrollbar-thumb {
 .account .account__note {
   -webkit-line-clamp: 2;
   line-clamp: 2;
-  line-height: 1.5;
+  line-height: 1.55;
   letter-spacing: -0.005em;
 }
 
@@ -804,7 +816,7 @@ html.custom-scrollbars *::-webkit-scrollbar-thumb {
   font-size: 14.5px;
 
   &__option {
-    line-height: 1.5;
+    line-height: 1.55;
     padding: 8px 0;
     letter-spacing: -0.005em;
 
@@ -843,7 +855,7 @@ html.custom-scrollbars *::-webkit-scrollbar-thumb {
   &__option input[type='text'] {
     @media screen and (width <= 600px) {
       letter-spacing: -0.003em;
-      line-height: 1.5;
+      line-height: 1.55;
     }
   }
 }
@@ -882,7 +894,7 @@ html.custom-scrollbars *::-webkit-scrollbar-thumb {
   .detailed-status .status__content__text {
     font-size: 16.5px;
     letter-spacing: -0.002em;
-    line-height: 1.5;
+    line-height: 1.55;
     max-width: none; // 모바일에선 컨테이너 폭 그대로
   }
 
@@ -897,7 +909,7 @@ html.custom-scrollbars *::-webkit-scrollbar-thumb {
 // ----------------------------------------------------------
 .hashtag-bar {
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.55;
   letter-spacing: -0.005em;
 
   a {
@@ -981,7 +993,7 @@ html.custom-scrollbars *::-webkit-scrollbar-thumb {
 .empty-column-indicator,
 .empty-column-indicator p {
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 1.55;
   letter-spacing: -0.005em;
 }
 
@@ -1089,4 +1101,81 @@ html.custom-scrollbars *::-webkit-scrollbar-thumb {
 .detailed-status .status__content {
   margin-inline-start: 0;
   margin-inline-end: auto;
+}
+
+// =============================================================================
+//  v2 수정 — 사용자 추가 요청
+// =============================================================================
+
+// ---------------------------------------------------------------------
+// (#2) 긴 본문 자연스러운 줄 단위 끊김 + 페이드 + '더보기' 유도
+//
+//   기존 .status__content--collapsed 는 max-height: 22px * 15 = 330px 로
+//   고정인데, line-height 1.55 적용 후엔 라인 경계가 안 맞아 마지막 줄이
+//   글자 중간에서 잘렸음. 해결:
+//    (1) max-height 를 line-height 의 정수 배 + em 으로 재정의
+//    (2) 하단에 부드러운 mask-image 그라데이션 페이드
+//    (3) text-overflow: ellipsis 제거 (멀티라인에선 어차피 무용)
+//    (4) 상세 화면(.detailed-status)에서는 절대 collapsed 적용 안 되도록
+//        방어적 max-height: none
+// ---------------------------------------------------------------------
+.status__content.status__content--collapsed {
+  // 14 줄 × 1.55 em ≒ 21.7em — 라인 경계에 정확히 맞춤
+  max-height: 21.7em;
+  // 하단 1.5em 부드럽게 페이드 → 글자 중간 hard-cut 사라짐
+  mask-image: linear-gradient(
+    to bottom,
+    rgb(0 0 0 / 100%) calc(100% - 1.5em),
+    rgb(0 0 0 / 0%) 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    rgb(0 0 0 / 100%) calc(100% - 1.5em),
+    rgb(0 0 0 / 0%) 100%
+  );
+  position: relative;
+}
+
+// 상세 화면에서는 어떤 경우에도 collapse 적용 X — 무조건 전문 노출
+.detailed-status .status__content,
+.detailed-status .status__content.status__content--collapsed {
+  max-height: none;
+  mask-image: none;
+  -webkit-mask-image: none;
+  overflow: visible;
+}
+
+// '더보기' 버튼 — 본문과 호흡 맞춤 + 위로 살짝 띄움 (페이드 영역 침범 안 함)
+.status__content__read-more-button {
+  margin-top: 4px; // base 16 → 4 (페이드와 자연스러운 연결)
+  padding: 6px 0;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--color-text-brand);
+  transition: color 0.12s ease;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: none;
+    color: var(--color-text-brand);
+    opacity: 0.85;
+  }
+}
+
+// status__content 자체의 base text-overflow: ellipsis 는 multi-line 에서
+// 무용지물이고 ellipsis 가 어색해 보이는 케이스가 있어 제거
+.status__content,
+.reply-indicator__content {
+  text-overflow: clip;
+}
+
+// ---------------------------------------------------------------------
+// (#5) link-footer 영역 숨김 — 폐쇄 인스턴스에 외부 안내 footer 불필요
+// ---------------------------------------------------------------------
+.link-footer,
+.compose-panel .link-footer,
+.navigation-panel .link-footer,
+.columns-area__panels__pane--navigational .link-footer,
+.columns-area__panels__pane--compositional .link-footer {
+  display: none !important;
 }

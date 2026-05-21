@@ -61,9 +61,13 @@ class REST::AccountSerializer < ActiveModel::Serializer
   end
 
   def acct
-    # 만약 로컬 계정이라면 @username만 반환하고,
-    # 외부 계정이라면 원래대로 pretty_acct(username@domain)를 반환하라.
-    object.local? ? "@#{object.username}" : object.pretty_acct
+    # 마스토돈 표준 동작 복원:
+    #   - 로컬:  'notice'
+    #   - 원격: 'user@remote.tld'
+    # 이전 커스텀은 로컬에 '@' prepend 했는데, 이게 URL/accounts_map/lookup 의
+    # 전 영역에서 데이터 일관성을 깨뜨려 프로필 무한 로딩 + URL @@중복을 유발.
+    # 클라이언트 측 표시는 별도로 '@${acct}' 를 prepend 하므로 여기서는 절대 X.
+    object.pretty_acct
   end
 
   def note
