@@ -36,3 +36,6 @@
 // CW(열람 주의) 셀렉트박스 공통 스타일 — 4개 테마(default/twitter-*)가 공유.
 // 반드시 'mastodon/components' 이후에 위치해야 native select chrome 룰을 이김.
 @use 'mastodon/compose_cw' as compose-cw;
+
+// Status 본문 표시(타래/상세 전문 노출, 더보기 페이드) — 4개 테마 공유.
+@use 'mastodon/status_thread' as status-thread;

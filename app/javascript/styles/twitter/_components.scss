@@ -1007,77 +1007,10 @@ html.custom-scrollbars *::-webkit-scrollbar-thumb {
 //  v2 수정 — 사용자 추가 요청
 // =============================================================================
 
-// ---------------------------------------------------------------------
-// (#2) 긴 본문 자연스러운 줄 단위 끊김 + 페이드 + '더보기' 유도
-//
-//   기존 .status__content--collapsed 는 max-height: 22px * 15 = 330px 로
-//   고정인데, line-height 1.55 적용 후엔 라인 경계가 안 맞아 마지막 줄이
-//   글자 중간에서 잘렸음. 해결:
-//    (1) max-height 를 line-height 의 정수 배 + em 으로 재정의
-//    (2) 하단에 부드러운 mask-image 그라데이션 페이드
-//    (3) text-overflow: ellipsis 제거 (멀티라인에선 어차피 무용)
-//    (4) 상세 화면(.detailed-status)에서는 절대 collapsed 적용 안 되도록
-//        방어적 max-height: none
-// ---------------------------------------------------------------------
-.status__content.status__content--collapsed {
-  // 14 줄 × 1.55 em ≒ 21.7em — 라인 경계에 정확히 맞춤
-  max-height: 21.7em;
-  // 하단 1.5em 부드럽게 페이드 → 글자 중간 hard-cut 사라짐
-  mask-image: linear-gradient(
-    to bottom,
-    rgb(0 0 0 / 100%) calc(100% - 1.5em),
-    rgb(0 0 0 / 0%) 100%
-  );
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    rgb(0 0 0 / 100%) calc(100% - 1.5em),
-    rgb(0 0 0 / 0%) 100%
-  );
-  position: relative;
-}
-
-// 상세 화면에서는 어떤 경우에도 collapse 적용 X — 무조건 전문 노출.
-// (#5) 타래의 부모/답글(.status--in-thread)도 동일하게 전문 노출 —
-//      사용자가 멘션 답글 작성 시 원본 맥락 전체를 볼 수 있도록.
-.detailed-status .status__content,
-.detailed-status .status__content.status__content--collapsed,
-.status--in-thread .status__content,
-.status--in-thread .status__content.status__content--collapsed {
-  max-height: none;
-  mask-image: none;
-  -webkit-mask-image: none;
-  overflow: visible;
-}
-
-// 타래 상세에서는 '더보기' 버튼도 노출 불필요 (이미 전문 보임)
-.detailed-status .status__content__read-more-button,
-.status--in-thread .status__content__read-more-button {
-  display: none;
-}
-
-// '더보기' 버튼 — 본문과 호흡 맞춤 + 위로 살짝 띄움 (페이드 영역 침범 안 함)
-.status__content__read-more-button {
-  margin-top: 4px; // base 16 → 4 (페이드와 자연스러운 연결)
-  padding: 6px 0;
-  font-weight: 600;
-  letter-spacing: -0.005em;
-  color: var(--color-text-brand);
-  transition: color 0.12s ease;
-
-  &:hover,
-  &:focus-visible {
-    text-decoration: none;
-    color: var(--color-text-brand);
-    opacity: 0.85;
-  }
-}
-
-// status__content 자체의 base text-overflow: ellipsis 는 multi-line 에서
-// 무용지물이고 ellipsis 가 어색해 보이는 케이스가 있어 제거
-.status__content,
-.reply-indicator__content {
-  text-overflow: clip;
-}
+// (#2 / #5) Status 본문 collapsed + 더보기 + 상세/타래 전문 노출 룰은
+//           'mastodon/_status_thread.scss' 공유 모듈로 이전.
+//           4개 테마 진입점(application + twitter-light/dark/dim)에서 모두 @use.
+//           이전엔 이 파일에만 있어서 default 테마에선 적용 안 됐던 문제 해결.
 
 // ---------------------------------------------------------------------
 // (#5) link-footer 영역 숨김 — 폐쇄 인스턴스에 외부 안내 footer 불필요
@@ -1088,4 +1021,78 @@ html.custom-scrollbars *::-webkit-scrollbar-thumb {
 .columns-area__panels__pane--navigational .link-footer,
 .columns-area__panels__pane--compositional .link-footer {
   display: none !important;
+}
+
+// =============================================================================
+//  E2: prefers-reduced-motion 접근성 지원
+//      전정 장애/멀미 민감 사용자 대응. OS 레벨 토글:
+//        macOS: 설정 → 손쉬운 사용 → 디스플레이 → 동작 줄이기
+//        iOS:   설정 → 손쉬운 사용 → 동작 → 동작 줄이기
+//        Android: 설정 → 접근성 → 애니메이션 제거
+//        Windows: 설정 → 접근성 → 시각 효과 → 애니메이션 효과
+// =============================================================================
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    // 모든 트랜지션/애니메이션 거의 즉시 — 0.01ms 로 사실상 무효화
+    // (0ms 가 아닌 이유: 일부 JS 가 transitionend 이벤트 의존)
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  // mask-image 페이드는 시각 정보 전달이므로 유지 (motion 아님)
+  // backdrop-filter 도 유지 (정적 효과)
+}
+
+// =============================================================================
+//  H4: 터치 디바이스 hover 잔류 차단
+//      모바일 브라우저는 손가락 탭 시 :hover 가 잠깐 활성 → 다음 탭까지 stuck.
+//      (hover: none) 매체에서 카드/리스트의 hover-bg 변경을 무력화해
+//      "유령 하이라이트" 현상 제거. :active(누르는 동안) 와 :focus 는 유지.
+// =============================================================================
+@media (hover: none) {
+  // 카드/리스트류 hover 배경 — 가장 stuck 이 눈에 띄는 부분
+  .status:hover,
+  .status--in-thread:hover,
+  .notification-ungrouped:hover,
+  .notification-group:hover,
+  .conversation:hover {
+    background: transparent;
+  }
+
+  // 네비게이션 (좌측 사이드바 메뉴 아이템)
+  .column-link:hover,
+  .column-link--transparent:hover {
+    background: transparent;
+  }
+
+  // 드롭다운 메뉴 (개별 옵션 hover)
+  .dropdown-menu__item a:hover,
+  .dropdown-menu__item:hover,
+  .privacy-dropdown__option:hover,
+  .language-dropdown__dropdown__results__item:hover {
+    background: transparent;
+  }
+
+  // 아이콘 버튼 (좋아요/리블로그/답글) — :active 피드백은 유지
+  // 단 brand color 변경은 의도적이므로 bg만 초기화
+  .icon-button:hover {
+    background: transparent;
+  }
+
+  // 검색 / 자동완성
+  .autosuggest-textarea__suggestions__item:hover,
+  .search-popout__menu__item:hover {
+    background: transparent;
+  }
+
+  // 단 :active 시 옅은 피드백 — 사용자 탭 확인용
+  .status:active,
+  .column-link:active,
+  .dropdown-menu__item a:active {
+    background: var(--color-bg-overlay-highlight);
+  }
 }

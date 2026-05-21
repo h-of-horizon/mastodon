@@ -44,3 +44,4 @@
 @use 'twitter/dm' as twitter-dm; // 공유 (DM 분리 UI 튜닝)
 @use 'twitter/media-modal' as twitter-media-modal; // 공유 (미디어 모달 라운드)
 @use 'mastodon/compose_cw' as compose-cw; // CW 셀렉트박스 (default 와 공통)
+@use 'mastodon/status_thread' as status-thread; // 타래/상세 전문 노출 (공통)

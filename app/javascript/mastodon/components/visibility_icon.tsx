@@ -1,7 +1,7 @@
 import { defineMessages, useIntl } from 'react-intl';
 
-import AlternateEmailIcon from '@/material-icons/400-24px/alternate_email.svg?react';
 import LockIcon from '@/material-icons/400-24px/lock.svg?react';
+import MailIcon from '@/material-icons/400-24px/mail.svg?react';
 import PublicIcon from '@/material-icons/400-24px/public.svg?react';
 import QuietTimeIcon from '@/material-icons/400-24px/quiet_time.svg?react';
 import type { StatusVisibility } from 'mastodon/models/status';
@@ -46,8 +46,8 @@ export const VisibilityIcon: React.FC<{ visibility: StatusVisibility }> = ({
       text: intl.formatMessage(messages.private_short),
     },
     direct: {
-      icon: 'at',
-      iconComponent: AlternateEmailIcon,
+      icon: 'mail',
+      iconComponent: MailIcon,
       text: intl.formatMessage(messages.direct_short),
     },
   };

@@ -1,0 +1,87 @@
+// =============================================================================
+//  Status 본문 표시 — 4개 테마 공통 룰
+//
+//   - 목록 카드(.status)에서 긴 본문은 collapsed (max-height + mask 페이드)
+//   - 상세 화면(.detailed-status), 타래 부모/답글(.status--in-thread)은 전문 노출
+//   - 더보기 버튼 디자인 + 상세/타래에선 숨김
+//
+//  이 파일은 application.scss(default 테마) + twitter-light/dark/dim.scss
+//  4개 진입점 모두에서 @use 됩니다. 이전엔 twitter/_components.scss 에만
+//  있어서 default 테마에서는 룰이 적용되지 않았던 문제 해결.
+// =============================================================================
+
+// ---------------------------------------------------------------------
+//  Collapsed status — line-aligned max-height + 부드러운 mask 페이드
+// ---------------------------------------------------------------------
+.status__content.status__content--collapsed {
+  // 14 줄 × 1.55 em ≒ 21.7em — line-height 1.55 기준 라인 경계 일치
+  max-height: 21.7em;
+
+  // 하단 1.5em 부드러운 페이드 — 글자 중간 hard-cut 시각적 제거
+  mask-image: linear-gradient(
+    to bottom,
+    rgb(0 0 0 / 100%) calc(100% - 1.5em),
+    rgb(0 0 0 / 0%) 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    rgb(0 0 0 / 100%) calc(100% - 1.5em),
+    rgb(0 0 0 / 0%) 100%
+  );
+  position: relative;
+
+  // GPU 레이어 분리 — 저사양 안드로이드 스크롤 perf
+  contain: layout paint;
+}
+
+// ---------------------------------------------------------------------
+//  상세 / 타래 — 전문 노출 (max-height + mask 무력화)
+//  '.status--in-thread' 는 status.jsx 에서 rootId prop 있을 때 추가됨
+//  → status 상세 페이지의 ancestors / descendants 모두 해당
+// ---------------------------------------------------------------------
+.detailed-status .status__content,
+.detailed-status .status__content.status__content--collapsed,
+.status--in-thread .status__content,
+.status--in-thread .status__content.status__content--collapsed {
+  max-height: none;
+  mask-image: none;
+  -webkit-mask-image: none;
+  overflow: visible;
+  contain: none;
+}
+
+// 상세/타래에서는 '더보기' 버튼 자체를 숨김 (이미 전문 노출)
+// 더 구체적인 셀렉터로 specificity 보강 — base mastodon 룰을 확실히 이김
+.detailed-status .status__content__read-more-button,
+.status--in-thread .status__content__read-more-button,
+.detailed-status > .status__content__read-more-button,
+.status--in-thread > .status__content__read-more-button {
+  display: none !important;
+}
+
+// ---------------------------------------------------------------------
+//  '더보기' 버튼 디자인 — 페이드와 자연스럽게 연결
+// ---------------------------------------------------------------------
+.status__content__read-more-button {
+  margin-top: 4px;
+  padding: 6px 0;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--color-text-brand);
+  transition: color 0.12s ease;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: none;
+    color: var(--color-text-brand);
+    opacity: 0.85;
+  }
+}
+
+// ---------------------------------------------------------------------
+//  text-overflow ellipsis 제거 — multi-line 에서 무의미하고 가끔 어색
+// ---------------------------------------------------------------------
+.status__content,
+.reply-indicator__content {
+  text-overflow: clip;
+}

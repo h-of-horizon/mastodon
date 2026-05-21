@@ -8,7 +8,7 @@ import type { OverlayProps } from 'react-overlays/Overlay';
 import Overlay from 'react-overlays/Overlay';
 
 import type { StatusVisibility } from '@/mastodon/api_types/statuses';
-import AlternateEmailIcon from '@/material-icons/400-24px/alternate_email.svg?react';
+import MailIcon from '@/material-icons/400-24px/mail.svg?react';
 import LockIcon from '@/material-icons/400-24px/lock.svg?react';
 import PublicIcon from '@/material-icons/400-24px/public.svg?react';
 import QuietTimeIcon from '@/material-icons/400-24px/quiet_time.svg?react';
@@ -130,8 +130,8 @@ const PrivacyDropdown: React.FC<PrivacyDropdownProps> = ({
 
   if (!noDirect) {
     options.push({
-      icon: 'at',
-      iconComponent: AlternateEmailIcon,
+      icon: 'mail',
+      iconComponent: MailIcon,
       value: 'direct',
       text: intl.formatMessage(messages.direct_short),
       meta: intl.formatMessage(messages.direct_long),

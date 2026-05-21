@@ -272,8 +272,13 @@ h4 {
 }
 
 // (4) Compose form 2000자 입력 편의 — 최소 높이 확보
+//     데스크톱은 180px, 모바일(≤630px)은 120px (작은 viewport 활용)
 .compose-form .autosuggest-textarea__textarea {
   min-height: 180px;
+
+  @media (max-width: 630px) {
+    min-height: 120px;
+  }
 }
 
 // (5) 본문 안 인라인 코드 / pre 가독성 살짝 보강

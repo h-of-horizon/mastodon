@@ -2,22 +2,44 @@
 // License: SIL Open Font License 1.1
 // Upstream: https://github.com/orioncactus/pretendard
 //
-// CDN 사용에 대한 주의:
-// 마스토돈 CSP(font_src)가 'self'만 허용하면 이 폰트가 로드되지 않습니다.
-// 그 경우 config/initializers/content_security_policy.rb 의 font_src에
-// "https://cdn.jsdelivr.net" 을 추가하거나, woff2 파일을 받아 다음 위치로 옮기고
-// src 경로를 로컬로 바꿔 주세요:
-//   app/javascript/fonts/pretendard/PretendardVariable.woff2
+// ─────────────────────────────────────────────────────────────────────
+// Self-host (권장) + CDN fallback
+// ─────────────────────────────────────────────────────────────────────
+// 1순위: 로컬 self-host (public/fonts/pretendard/PretendardVariable.woff2)
+//        - 첫 로드 지연 최소화 (~600ms 절약, cross-origin DNS+TLS 제거)
+//        - 외부 CDN 의존성 없음 (Cloudflare 차단/장애 무관)
+//        - 폐쇄 인스턴스 보안 이점: 외부 fetch 0
+//        - CSP font_src 에 외부 host 등록 불필요
+//
+// 2순위: jsdelivr CDN — 로컬 파일이 없을 때만 fallback (개발/테스트 환경)
+//
+// ── 로컬 self-host 설정 방법 ──
+//  1. https://github.com/orioncactus/pretendard/releases/download/v1.3.9/
+//     Pretendard-1.3.9.zip 다운로드
+//  2. 압축 풀고 `web/variable/PretendardVariable.woff2` 파일을 찾음
+//  3. 서버에서 `public/fonts/pretendard/PretendardVariable.woff2` 위치에 배치
+//     (docker compose 환경: 호스트의 ./public/fonts/pretendard/ 에 둠)
+//  4. nginx/static handler 가 자동으로 `/fonts/pretendard/...` 경로 서빙
+//  5. 추가 빌드/재시작 불필요 — 다음 페이지 로드부터 적용
+//
+// 파일 미배치 시: 브라우저가 1순위 URL 404 → 자동으로 2순위 CDN 으로 fallback.
+// 빌드/배포는 정상 동작 (FOIT 없음, FOUT 짧음).
+// ─────────────────────────────────────────────────────────────────────
 
 @font-face {
   font-family: 'Pretendard Variable';
   font-weight: 45 920;
   font-style: normal;
   font-display: swap;
-  // jsdelivr `gh/` 경로는 woff2 파일 위치가 없어 404가 됨.
-  // npm 패키지 경로(`npm/pretendard@1.3.9/...`)가 정확한 경로.
-  src: url('https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/woff2/PretendardVariable.woff2')
-    format('woff2-variations');
+
+  // 폰트 src 폴백 체인 — 브라우저가 위에서부터 시도, 실패 시 다음으로
+  src:
+    // 1순위: self-host (public/fonts/pretendard/ 에 파일 배치 시 즉시 활성)
+    url('/fonts/pretendard/PretendardVariable.woff2') format('woff2-variations'),
+    // 2순위: jsdelivr CDN — self-host 파일이 없으면 자동 fallback
+    url('https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/woff2/PretendardVariable.woff2')
+      format('woff2-variations');
+
   // 한국어 본문 가독성을 위한 OpenType 피처
   //  - palt: Proportional Alternate Widths (한글/구두점 좌우 여백 자연 조정)
   //  - kern: Kerning

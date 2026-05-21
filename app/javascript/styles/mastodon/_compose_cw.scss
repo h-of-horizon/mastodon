@@ -12,14 +12,15 @@
 // =============================================================================
 
 // Container — 좌측 amber 표시 한 줄만 (배경 tint 없음)
+// gap 12px / 양쪽 패딩 14px — '기타' 모드에서 input 이 우측에 너무 붙지 않도록
 .spoiler-input.spoiler-input--cw {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   background: transparent;
   border: 0;
   border-inline-start: 3px solid #f59e0b; // amber 500 — warning 시그널
-  padding: 6px 0 6px 12px;
+  padding: 6px 14px 6px 14px;
   margin: 4px 0;
 }
 
@@ -37,7 +38,8 @@ $cw-control-radius: 9999px;
   -webkit-appearance: none;
   -moz-appearance: none;
 
-  // 커스텀 chevron — currentColor 기반이라 다크/라이트 자동
+  // 커스텀 chevron (라이트 톤 기본 — gray-600)
+  // 다크/딤 테마 오버라이드는 아래 [data-color-scheme] 분기에서 별도 SVG
   background-color: var(--color-bg-tertiary);
   background-image:
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10' fill='none'><path d='M2 4l3 3 3-3' stroke='%23536471' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
@@ -61,7 +63,9 @@ $cw-control-radius: 9999px;
   color: var(--color-text-primary);
 
   cursor: pointer;
-  flex: 0 0 auto;
+  // 기본 동작: select 가 전체 폭 차지 (프리셋만 선택할 때 빈 공간 없음)
+  flex: 1 1 auto;
+  min-width: 0;
   box-sizing: border-box;
   outline: 0;
 
@@ -97,6 +101,13 @@ $cw-control-radius: 9999px;
   &::-ms-expand {
     display: none;
   }
+}
+
+// "기타" 모드 (.spoiler-input--with-custom): select 컴팩트화, input 이 나머지 차지
+.spoiler-input.spoiler-input--cw.spoiler-input--with-custom .spoiler-input__select {
+  flex: 0 0 auto;
+  min-width: 130px;
+  width: 130px;
 }
 
 // "기타" 모드에서만 노출되는 직접 입력 컨테이너 — select와 동일 형태
@@ -170,4 +181,55 @@ select.spoiler-input__select {
   // 단, 일부 브라우저(특히 Safari)가 select 의 background-image 를
   // 무시하지 않도록 명시적으로 옵션 노이즈 제거
   text-indent: 0;
+}
+
+// ============================================================================
+//  E1: 다크/딤 테마에서 chevron 색을 옅은 회색으로 — 어두운 배경 가독성
+//      (background-image SVG 는 currentColor 못 받으므로 별도 정의)
+// ============================================================================
+[data-color-scheme='dark'] .spoiler-input.spoiler-input--cw .spoiler-input__select,
+html[data-color-scheme='dark'] .spoiler-input.spoiler-input--cw .spoiler-input__select {
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10' fill='none'><path d='M2 4l3 3 3-3' stroke='%23a8b3bc' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
+
+// ============================================================================
+//  H1: 모바일(≤630px) 터치 타겟 확대
+//      Apple HIG 44pt / Material 48dp / WCAG 2.5.5 AAA — 34px 미달 → 40px 로 보정.
+//      함께 폰트도 13→14px 로 살짝 키워 한글 가독 ↑
+// ============================================================================
+@media (max-width: 630px) {
+  .spoiler-input.spoiler-input--cw {
+    gap: 10px;
+    padding: 6px 12px;
+
+    .spoiler-input__select {
+      height: 40px;
+      min-height: 40px;
+      line-height: 40px;
+      font-size: 14px;
+      padding: 0 36px 0 16px;
+      background-position: right 14px center;
+      background-size: 12px 12px;
+    }
+
+    // 기타 모드 모바일: select 좁게 (110px) + 입력창 여유
+    &.spoiler-input--with-custom .spoiler-input__select {
+      min-width: 110px;
+      width: 110px;
+    }
+
+    .spoiler-input__custom .autosuggest-input {
+      height: 40px;
+      min-height: 40px;
+    }
+
+    .spoiler-input__custom input.spoiler-input__input,
+    .spoiler-input__custom .spoiler-input__input {
+      height: 100%;
+      line-height: 40px;
+      font-size: 14px;
+      padding: 0 16px;
+    }
+  }
 }

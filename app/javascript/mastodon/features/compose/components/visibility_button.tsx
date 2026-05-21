@@ -14,7 +14,7 @@ import type { ApiQuotePolicy } from '@/mastodon/api_types/quotes';
 import type { StatusVisibility } from '@/mastodon/api_types/statuses';
 import { Icon } from '@/mastodon/components/icon';
 import { useAppSelector, useAppDispatch } from '@/mastodon/store';
-import AlternateEmailIcon from '@/material-icons/400-24px/alternate_email.svg?react';
+import MailIcon from '@/material-icons/400-24px/mail.svg?react';
 import LockIcon from '@/material-icons/400-24px/lock.svg?react';
 import PublicIcon from '@/material-icons/400-24px/public.svg?react';
 import QuietTimeIcon from '@/material-icons/400-24px/quiet_time.svg?react';
@@ -66,8 +66,8 @@ const visibilityOptions = {
     text: privacyMessages.private_short,
   },
   direct: {
-    icon: 'at',
-    iconComponent: AlternateEmailIcon,
+    icon: 'mail',
+    iconComponent: MailIcon,
     value: 'direct',
     text: privacyMessages.direct_short,
   },
