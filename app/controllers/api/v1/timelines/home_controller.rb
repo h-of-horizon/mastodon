@@ -45,6 +45,18 @@ class Api::V1::Timelines::HomeController < Api::V1::Timelines::BaseController
     HomeFeed.new(current_account)
   end
 
+  # HomeFeed#inject_ancestors 가 chain 순서([root, parent, reply, ...]) 로 재배치
+  # 하므로 @statuses 가 더 이상 ID 내림차순이 아님. 이 때문에 기본 pagination 의
+  # `last.id` (= 가장 오래된 항목 가정) 가 깨져서 "더보기" 시 잉여/중복 페이지가
+  # 발생함. 실제 min/max ID 를 명시적으로 계산해 정확한 커서를 보장.
+  def pagination_max_id
+    @statuses.map(&:id).min
+  end
+
+  def pagination_since_id
+    @statuses.map(&:id).max
+  end
+
   def next_path
     api_v1_timelines_home_url next_path_params
   end

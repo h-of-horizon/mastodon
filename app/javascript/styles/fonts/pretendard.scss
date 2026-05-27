@@ -1,49 +1,81 @@
-// Pretendard Variable
+// Pretendard (Standard, weight 별 4개)
 // License: SIL Open Font License 1.1
 // Upstream: https://github.com/orioncactus/pretendard
 //
 // ─────────────────────────────────────────────────────────────────────
-// Self-host (권장) + CDN fallback
+// Self-host (가중치별 4개 woff2) + CDN fallback
 // ─────────────────────────────────────────────────────────────────────
-// 1순위: 로컬 self-host (public/fonts/pretendard/PretendardVariable.woff2)
-//        - 첫 로드 지연 최소화 (~600ms 절약, cross-origin DNS+TLS 제거)
-//        - 외부 CDN 의존성 없음 (Cloudflare 차단/장애 무관)
-//        - 폐쇄 인스턴스 보안 이점: 외부 fetch 0
-//        - CSP font_src 에 외부 host 등록 불필요
 //
-// 2순위: jsdelivr CDN — 로컬 파일이 없을 때만 fallback (개발/테스트 환경)
+// font-family 'Pretendard Variable' 이름은 기존 SCSS (_typography.scss,
+// _components.scss) 에서 참조하므로 유지. 실제 로드되는 파일은 가변(Variable)
+// 폰트가 아닌 weight 별 정적 woff2 4개:
+//   - Pretendard-Regular.woff2   (400)
+//   - Pretendard-Medium.woff2    (500)
+//   - Pretendard-SemiBold.woff2  (600)
+//   - Pretendard-Bold.woff2      (700)
 //
-// ── 로컬 self-host 설정 방법 ──
-//  1. https://github.com/orioncactus/pretendard/releases/download/v1.3.9/
-//     Pretendard-1.3.9.zip 다운로드
-//  2. 압축 풀고 `web/variable/PretendardVariable.woff2` 파일을 찾음
-//  3. 서버에서 `public/fonts/pretendard/PretendardVariable.woff2` 위치에 배치
-//     (docker compose 환경: 호스트의 ./public/fonts/pretendard/ 에 둠)
-//  4. nginx/static handler 가 자동으로 `/fonts/pretendard/...` 경로 서빙
-//  5. 추가 빌드/재시작 불필요 — 다음 페이지 로드부터 적용
+// 각 @font-face 는:
+//   1순위: /fonts/Pretendard-<Weight>.woff2 (self-host, public/fonts/ 에 배치)
+//   2순위: jsdelivr CDN — self-host 가 누락된 환경(개발/테스트)에서만 사용
 //
-// 파일 미배치 시: 브라우저가 1순위 URL 404 → 자동으로 2순위 CDN 으로 fallback.
-// 빌드/배포는 정상 동작 (FOIT 없음, FOUT 짧음).
+// CSP font_src 에 'cdn.jsdelivr.net' 이 포함되어 있어야 CDN fallback 동작.
+// 모든 weight 에 font-display: swap → FOIT 없음, FOUT 짧음.
 // ─────────────────────────────────────────────────────────────────────
 
 @font-face {
   font-family: 'Pretendard Variable';
-  font-weight: 45 920;
+  font-weight: 400;
   font-style: normal;
   font-display: swap;
-
-  // 폰트 src 폴백 체인 — 브라우저가 위에서부터 시도, 실패 시 다음으로
   src:
-    // 1순위: self-host (public/fonts/pretendard/ 에 파일 배치 시 즉시 활성)
-    url('/fonts/pretendard/PretendardVariable.woff2') format('woff2-variations'),
-    // 2순위: jsdelivr CDN — self-host 파일이 없으면 자동 fallback
-    url('https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/woff2/PretendardVariable.woff2')
-      format('woff2-variations');
+    url('/fonts/Pretendard-Regular.woff2') format('woff2'),
+    url('https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-Regular.woff2')
+      format('woff2');
+  font-feature-settings:
+    'palt' 1,
+    'kern' 1,
+    'calt' 1;
+}
 
-  // 한국어 본문 가독성을 위한 OpenType 피처
-  //  - palt: Proportional Alternate Widths (한글/구두점 좌우 여백 자연 조정)
-  //  - kern: Kerning
-  //  - calt: Contextual Alternates
+@font-face {
+  font-family: 'Pretendard Variable';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src:
+    url('/fonts/Pretendard-Medium.woff2') format('woff2'),
+    url('https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-Medium.woff2')
+      format('woff2');
+  font-feature-settings:
+    'palt' 1,
+    'kern' 1,
+    'calt' 1;
+}
+
+@font-face {
+  font-family: 'Pretendard Variable';
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src:
+    url('/fonts/Pretendard-SemiBold.woff2') format('woff2'),
+    url('https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-SemiBold.woff2')
+      format('woff2');
+  font-feature-settings:
+    'palt' 1,
+    'kern' 1,
+    'calt' 1;
+}
+
+@font-face {
+  font-family: 'Pretendard Variable';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src:
+    url('/fonts/Pretendard-Bold.woff2') format('woff2'),
+    url('https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-Bold.woff2')
+      format('woff2');
   font-feature-settings:
     'palt' 1,
     'kern' 1,

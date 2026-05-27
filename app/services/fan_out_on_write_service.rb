@@ -79,11 +79,12 @@ class FanOutOnWriteService < BaseService
   end
 
   def notify_mentioned_accounts!
-    # 폐쇄형 인스턴스 정책: DM(direct visibility) 은 mention 알림을 만들지 않음.
-    # 사용자가 /conversations(DM 메뉴)에서만 DM 을 확인하도록 강제 — 알림 timeline,
-    # 멘션창 어디에도 DM 노출 X. (Layer: 알림 생성 자체를 막음)
-    return if @status.direct_visibility?
-
+    # 폐쇄형 인스턴스 정책 (DM 알림 처리 구조):
+    #  - 알림 *생성* 은 일반 mention 과 동일하게 진행 → 웹 푸시/모바일 푸시 알림이
+    #    정상 발송되어 사용자가 새 DM 도착을 즉시 인지 가능.
+    #  - 단, 알림 *목록 화면* (notifications 페이지) 에서는 DM mention 을 숨김 —
+    #    Notification.exclude_direct_mention_notifications (read-time 필터) 가 처리.
+    #  - 사용자는 푸시 알림으로 알람 → /conversations 페이지에서 본문 확인.
     @status.active_mentions.joins(:account).merge(Account.local).select(:id, :account_id).reorder(nil).find_in_batches do |mentions|
       LocalNotificationWorker.push_bulk(mentions) do |mention|
         options = { 'silenced' => true } if @options[:silenced_account_ids]&.include?(mention.account_id)
