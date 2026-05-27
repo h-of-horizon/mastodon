@@ -57,39 +57,47 @@ class HomeFeed < Feed
     statuses = statuses_relation.to_a
     return statuses if statuses.empty?
 
-    # 이미 timeline 안에 있는 parent 는 skip (중복 방지)
-    timeline_ids = statuses.map(&:id).to_set
-
-    parent_ids = statuses
-                 .filter_map(&:in_reply_to_id)
-                 .uniq
-                 .reject { |id| timeline_ids.include?(id) }
-
+    # 모든 reply 의 parent_id 수집 — timeline 안에 있어도 일단 포함.
+    # (self-reply 처럼 parent 가 이미 timeline 에 있는 경우에도 ancestor 가 reply 바로 위에 오도록)
+    parent_ids = statuses.filter_map(&:in_reply_to_id).uniq
     return statuses if parent_ids.empty?
 
-    # 한 번에 batch fetch (N+1 회피) + 가시성 필터링
+    # batch fetch (N+1 회피). DM 은 timeline 노출 정책상 ancestor 로도 inject 안 함.
     visible_ancestors = Status
                         .where(id: parent_ids)
+                        .where.not(visibility: :direct)
                         .includes(:account)
                         .index_by(&:id)
                         .select { |_id, ancestor| visible_ancestor?(ancestor) }
 
     return statuses if visible_ancestors.empty?
 
-    # Sliding-window dedup 으로 parent 1번만 노출
+    # ★ Twitter 스타일 재배치 알고리즘 ★
+    #   - 각 reply 마다 parent 를 reply 바로 위에 배치
+    #   - parent 가 timeline 의 다른 위치에 이미 있으면 → 거기서 제거하고 reply 위로 이동
+    #   - sliding-window dedup: 같은 parent 가 직전 N 개에 있으면 skip
     result = []
+    result_ids = Set.new
     recent_parent_ids = []
 
     statuses.each do |status|
       parent_id = status.in_reply_to_id
 
       if parent_id && visible_ancestors[parent_id] && !recent_parent_ids.include?(parent_id)
+        # parent 가 result 의 다른 위치에 이미 있으면 제거 (reply 바로 위로 재배치)
+        result.delete_if { |s| s.id == parent_id } if result_ids.include?(parent_id)
+
         result << visible_ancestors[parent_id]
+        result_ids.add(parent_id)
         recent_parent_ids << parent_id
         recent_parent_ids.shift if recent_parent_ids.size > ANCESTOR_DEDUP_WINDOW
       end
 
-      result << status
+      # status 가 이미 result 에 있으면 (자기가 누군가의 ancestor 로 먼저 inject 됐을 때) skip
+      unless result_ids.include?(status.id)
+        result << status
+        result_ids.add(status.id)
+      end
     end
 
     result

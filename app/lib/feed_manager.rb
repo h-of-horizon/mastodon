@@ -468,10 +468,12 @@ class FeedManager
     return :filter if check_for_blocks.any? { |target_account_id| crutches[:blocking][target_account_id] || crutches[:muting][target_account_id] }
     return :filter if crutches[:blocked_by][status.account_id]
 
-    if status.reply? && !status.in_reply_to_account_id.nil?                                                                      # Filter out if it's a reply
-      should_filter   = !crutches[:following][status.in_reply_to_account_id]                                                     # and I'm not following the person it's a reply to
-      should_filter &&= receiver_id != status.in_reply_to_account_id                                                             # and it's not a reply to me
-      should_filter &&= status.account_id != status.in_reply_to_account_id                                                       # and it's not a self-reply
+    if status.reply? && !status.in_reply_to_account_id.nil?
+      # 폐쇄형 인스턴스 정책 (Twitter 스타일): 모든 답글을 home 에 노출.
+      # 원본은 reply_to 가 미팔로우 + 나 아님 + 자기답글 아닐 때 filter 했지만,
+      # 답글마다 ancestor 가 같이 보이도록 하려면 답글 자체가 home 에 들어와야 함.
+      # ancestor 자동 인젝션은 HomeFeed#inject_ancestors 에서 처리.
+      should_filter = false
     elsif status.reblog?                                                                                                         # Filter out a reblog
       should_filter   = crutches[:hiding_reblogs][status.account_id]                                                             # if the reblogger's reblogs are suppressed
       should_filter ||= crutches[:blocked_by][status.reblog.account_id]                                                          # or if the author of the reblogged status is blocking me

@@ -85,3 +85,22 @@
 .reply-indicator__content {
   text-overflow: clip;
 }
+
+// ---------------------------------------------------------------------
+//  타임라인 카드 보더 중복 해결
+//
+//  status.jsx 가 previousId 받으면 비-thread 인접 status 에 자동으로
+//  `.status--first-in-thread` 클래스 추가 → base 의 border-top: 1px 적용.
+//  앞 카드의 border-bottom 1px 와 겹쳐 시각적으로 2px 보더가 됨.
+//
+//  해결: home 타임라인 (rootId 없는 컨텍스트 = .status--in-thread 클래스 없음)
+//  에서는 --first-in-thread 의 border-top 을 제거. base border-bottom 만으로
+//  카드 구분 충분.
+//
+//  단, status 상세 페이지(detailed_status 의 thread)는 .status--in-thread
+//  가 함께 적용되며 그 안의 --in-thread 가 border-bottom 을 제거하므로
+//  --first-in-thread border-top 이 그곳에서는 필수 → :not() 으로 격리.
+// ---------------------------------------------------------------------
+.status--first-in-thread:not(.status--in-thread) {
+  border-top: 0;
+}
