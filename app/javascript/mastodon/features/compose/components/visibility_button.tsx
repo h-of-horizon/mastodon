@@ -39,7 +39,7 @@ const messages = defineMessages({
   // DM 답글 시 visibility 변경 잠금 안내
   dm_locked: {
     id: 'compose_form.privacy.dm_locked',
-    defaultMessage: 'DM 답글은 DM(개인 멘션)으로만 전송됩니다',
+    defaultMessage: 'DM 답글은 DM으로만 전송됩니다',
   },
 });
 

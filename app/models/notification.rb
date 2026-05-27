@@ -187,7 +187,26 @@ class Notification < ApplicationRecord
         scope.merge!(where(filtered: false)) unless include_filtered || from_account_id.present?
         scope.merge!(where(from_account_id: from_account_id)) if from_account_id.present?
         scope.merge!(where(type: requested_types)) unless requested_types.size == TYPES.size
+
+        # 폐쇄형 인스턴스 정책: DM(direct visibility) 에 대한 mention 알림 제외.
+        # write-time (FanOutOnWriteService) 에서 신규 DM 은 알림 생성 안 하지만,
+        # 정책 변경 이전에 누적된 기존 DM 알림 (DB 에 남아 있는 것) 까지 즉시 숨김.
+        # — type='mention' 이고 그 target status 가 direct 면 제외 (다른 type 은 영향 X)
+        scope.merge!(exclude_direct_mention_notifications)
       end
+    end
+
+    # DM(direct visibility) mention 알림 제외 scope —
+    # notifications.activity_id 가 가리키는 mentions 의 status.visibility = direct 면 제외.
+    def exclude_direct_mention_notifications
+      where.not(
+        "notifications.type = 'mention' AND notifications.activity_id IN (
+          SELECT mentions.id FROM mentions
+          INNER JOIN statuses ON statuses.id = mentions.status_id
+          WHERE statuses.visibility = ?
+        )",
+        Status.visibilities[:direct]
+      )
     end
 
     def preload_cache_collection_target_statuses(notifications, &_block)

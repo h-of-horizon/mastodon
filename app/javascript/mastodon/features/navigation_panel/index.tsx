@@ -140,6 +140,44 @@ const NotificationsLink = () => {
   );
 };
 
+// DM 메뉴 — 새 DM 수에 따라 badge 표시 (NotificationsLink 와 동일 패턴).
+// 카운트는 state.conversations.items 안의 unread=true 항목 수.
+// 최초 데이터는 mastodon.jsx 의 expandConversations 가 채워줌. 이후 직접 스트림
+// (connectDirectStream) 이 실시간으로 갱신.
+const DMLink: React.FC = () => {
+  const intl = useIntl();
+  const count = useAppSelector((state) => {
+    // state.conversations 는 Immutable.Map. items 는 Immutable.List<Map>.
+    const items = state.conversations.get('items') as
+      | ImmutableMap<string, unknown>
+      | undefined;
+    if (!items) return 0;
+    // ImmutableList.filter 가 size 가진 List 반환
+    const filtered = (items as unknown as {
+      filter: (
+        fn: (item: ImmutableMap<string, unknown>) => boolean,
+      ) => { size: number };
+    }).filter((item) => item.get('unread') === true);
+    return filtered.size;
+  });
+
+  return (
+    <ColumnLink
+      transparent
+      to='/conversations'
+      icon={
+        <IconWithBadge
+          id='mail'
+          icon={MailIcon}
+          count={count}
+          className='column-link__icon'
+        />
+      }
+      text={intl.formatMessage(messages.direct)}
+    />
+  );
+};
+
 const FollowRequestsLink: React.FC = () => {
   const intl = useIntl();
   const count = useAppSelector(
@@ -345,13 +383,7 @@ export const NavigationPanel: React.FC<{ multiColumn?: boolean }> = ({
                 text={intl.formatMessage(messages.collections)}
               />
             )}
-            <ColumnLink
-              transparent
-              to='/conversations'
-              icon='mail'
-              iconComponent={MailIcon}
-              text={intl.formatMessage(messages.direct)}
-            />
+            <DMLink />
 
             <hr />
 

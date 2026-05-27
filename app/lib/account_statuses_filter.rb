@@ -37,7 +37,10 @@ class AccountStatusesFilter
     if anonymous?
       account.statuses.distributable_visibility
     elsif author?
-      exclude_direct? ? account.statuses.where(visibility: %i(public unlisted private)) : account.statuses.all # NOTE: #merge! does not work without the #all
+      # 폐쇄형 인스턴스 정책: 자기 프로필에도 DM 절대 노출 X.
+      # 사용자의 모든 글이 보이되 direct visibility 는 제외 — DM 은 /conversations 에서만.
+      # (이전 코드는 exclude_direct 가 false 일 때 `.all` 로 DM 포함했음)
+      account.statuses.where.not(visibility: :direct)
     elsif blocked?
       Status.none
     else

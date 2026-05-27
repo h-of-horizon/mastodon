@@ -68,6 +68,15 @@ export function updateTimeline(timeline, status, { accept = undefined, bogusQuot
       return;
     }
 
+    // 추가 방어: DM 의 답글(부모가 direct visibility)도 home 차단.
+    // 서버 Layer 1/2 가 막지만 race condition 보호.
+    if (timeline === 'home' && status.in_reply_to_id) {
+      const parentInStore = getState().getIn(['statuses', status.in_reply_to_id]);
+      if (parentInStore && parentInStore.get('visibility') === 'direct') {
+        return;
+      }
+    }
+
     // ─── 1단계: reply 본체를 timeline 의 top 에 추가 ───
     dispatch(importFetchedStatus(status, { bogusQuotePolicy }));
 
@@ -110,6 +119,9 @@ export function updateTimeline(timeline, status, { accept = undefined, bogusQuot
           visited.add(cursor);
           const ancestorInStore = statuses.get(cursor);
           if (!ancestorInStore) break; // 스토어에 없으면 chain walk 중단
+          // DM ancestor 방어 — 서버 layer 가 race condition 등으로 새어도
+          // 클라이언트가 추가 leak 차단. DM 은 home 에 절대 끌어올리지 않음.
+          if (ancestorInStore.get('visibility') === 'direct') break;
           chainIds.push(cursor);
           cursor = ancestorInStore.get('in_reply_to_id');
           depth += 1;
@@ -132,14 +144,19 @@ export function updateTimeline(timeline, status, { accept = undefined, bogusQuot
           try {
             const response = await api().get(`/api/v1/statuses/${cursor}`);
             const ancestor = response.data;
-            dispatch(importFetchedStatus(ancestor, { bogusQuotePolicy }));
-            dispatch({
-              type: TIMELINE_UPDATE,
-              timeline,
-              status: ancestor,
-              usePendingItems: preferPendingItems,
-            });
-            // → items: [fetched_root, ...chain..., reply, ...]
+            // DM ancestor 방어 — fetch 응답이 DM 이면 home 에 끌어올리지 않음.
+            // 서버 정책상 user 가 mention 된 DM 은 GET 으로 받을 수 있지만,
+            // 우리 home 노출 정책은 DM 절대 표시 X.
+            if (ancestor.visibility !== 'direct') {
+              dispatch(importFetchedStatus(ancestor, { bogusQuotePolicy }));
+              dispatch({
+                type: TIMELINE_UPDATE,
+                timeline,
+                status: ancestor,
+                usePendingItems: preferPendingItems,
+              });
+              // → items: [fetched_root, ...chain..., reply, ...]
+            }
           } catch (err) {
             // 가시성 없음 (404/403) — chain 에 있는 거까지만 노출
           }
