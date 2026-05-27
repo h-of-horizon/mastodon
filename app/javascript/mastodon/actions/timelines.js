@@ -57,6 +57,13 @@ export function updateTimeline(timeline, status, { accept = undefined, bogusQuot
       return;
     }
 
+    // 폐쇄형 인스턴스 정책: 홈 타임라인에 DM 절대 노출 X.
+    // 서버측 FeedManager.filter_from_home + HomeFeed.get 가 차단하지만,
+    // streaming 으로 직접 들어오는 경우 대비해 클라이언트에서도 한 번 더 막음.
+    if (timeline === 'home' && status.visibility === 'direct') {
+      return;
+    }
+
     // ─── Twitter 스타일 ancestor 인젝션 (실시간 streaming) ───
     // 홈 타임라인에 도착한 답글이면 in_reply_to_id 의 원글도 함께 prepend.
     // (서버측 HomeFeed.rb 의 inject_ancestors 가 fetch 응답엔 처리하지만

@@ -446,6 +446,11 @@ class FeedManager
   # @param [Hash] crutches
   # @return [void|Symbol] nil, :skip_home, or :filter
   def filter_from_home(status, receiver_id, crutches, timeline_type = :home)
+    # 폐쇄형 인스턴스 정책: 홈 타임라인에 DM(direct visibility) 절대 노출 X.
+    # DM 은 'conversations' 컬럼에서만 보이도록 격리.
+    # 이 체크가 receiver_id == author 보다 먼저 와야 본인 DM 도 home 에 안 들어감.
+    return :filter    if timeline_type == :home && status.direct_visibility?
+
     return            if receiver_id == status.account_id
     return :filter    if status.reply? && (status.in_reply_to_id.nil? || status.in_reply_to_account_id.nil?)
     return :skip_home if timeline_type != :list && crutches[:exclusive_list_users][status.account_id].present?

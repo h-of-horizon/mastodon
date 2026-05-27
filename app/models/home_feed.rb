@@ -21,8 +21,12 @@ class HomeFeed < Feed
 
   # Override Feed#get — Redis 에서 가져온 statuses 위에 ancestor 인젝션.
   # 반환: Array<Status> (PreloadingConcern 의 preload_collection 이 Array 처리 가능)
+  #
+  # 추가: 홈 타임라인에서 DM(direct visibility) 완전 제외 — 정책 정합성.
+  # FeedManager.filter_from_home 가 write-time 에 이미 차단하지만, Redis 에
+  # 이전부터 남아 있는 DM 까지 즉시 사라지도록 read-time 에서도 한 번 더 필터.
   def get(limit, max_id = nil, since_id = nil, min_id = nil)
-    inject_ancestors(super)
+    inject_ancestors(super.where.not(visibility: :direct))
   end
 
   def async_refresh
