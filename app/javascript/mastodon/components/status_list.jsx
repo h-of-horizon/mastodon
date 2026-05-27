@@ -76,11 +76,21 @@ export default class StatusList extends ImmutablePureComponent {
               onClick={onLoadMore}
             />
           );
-        default:
+        default: {
+          // Twitter 스타일 thread connector — 홈 타임라인에서 ancestor + reply 가
+          // 연속될 때 connector line 시각화. Status 내부의 connectUp/connectReply
+          // 가 in_reply_to_id 와 매치 비교해 자동 그림. 매치 안 되면 라인 X (safe).
+          // 다른 타임라인(public/hashtag/account)에는 영향 X — 그 곳도 자연스러운
+          // 연속 답글 시각화 효과 얻음.
+          const previousStatusId = index > 0 ? statusIds.get(index - 1) : undefined;
+          const nextStatusId = statusIds.get(index + 1);
+
           return (
             <StatusQuoteManager
               key={statusId}
               id={statusId}
+              previousId={typeof previousStatusId === 'string' ? previousStatusId : undefined}
+              nextId={typeof nextStatusId === 'string' ? nextStatusId : undefined}
               contextType={timelineId}
               scrollKey={this.props.scrollKey}
               showThread
@@ -88,6 +98,7 @@ export default class StatusList extends ImmutablePureComponent {
               {...statusProps}
             />
           );
+        }
         }
       })
     ) : null;

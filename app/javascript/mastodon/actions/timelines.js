@@ -40,8 +40,13 @@ export const loadPending = timeline => ({
   timeline,
 });
 
+// Twitter 스타일 ancestor 인젝션 — 같은 ancestor 가 직전 N개 안에 있으면
+// 다시 prepend 하지 않음 (sliding window dedup). 서버측 HomeFeed.rb 의
+// ANCESTOR_DEDUP_WINDOW (5) 와 동일하게 유지.
+const STREAMING_ANCESTOR_DEDUP_WINDOW = 5;
+
 export function updateTimeline(timeline, status, { accept = undefined, bogusQuotePolicy = false } = {}) {
-  return (dispatch, getState) => {
+  return async (dispatch, getState) => {
     if (typeof accept === 'function' && !accept(status)) {
       return;
     }
@@ -49,9 +54,42 @@ export function updateTimeline(timeline, status, { accept = undefined, bogusQuot
     if (getState().getIn(['timelines', timeline, 'isPartial'])) {
       // Prevent new items from being added to a partial timeline,
       // since it will be reloaded anyway
-
       return;
     }
+
+    // ─── Twitter 스타일 ancestor 인젝션 (실시간 streaming) ───
+    // 홈 타임라인에 도착한 답글이면 in_reply_to_id 의 원글도 함께 prepend.
+    // (서버측 HomeFeed.rb 의 inject_ancestors 가 fetch 응답엔 처리하지만
+    //  streaming 새 status 는 우회하므로 클라이언트에서 보조)
+    //
+    //  - 직속 parent 1개만 (chain 위로 더 안 올라감)
+    //  - sliding-window dedup: 같은 parent 가 직전 5개 안에 있으면 skip
+    //  - 가시성/차단/뮤트는 서버측 /api/v1/statuses/:id 응답으로 자동 처리
+    //    (못 보는 글이면 4xx → catch 로 silent skip)
+    if (timeline === 'home' && status.in_reply_to_id) {
+      const items = getState().getIn(['timelines', timeline, 'items'], ImmutableList());
+      const recentItems = items.take(STREAMING_ANCESTOR_DEDUP_WINDOW);
+      const ancestorRecentlyShown = recentItems.includes(status.in_reply_to_id);
+
+      if (!ancestorRecentlyShown) {
+        try {
+          const response = await api().get(`/api/v1/statuses/${status.in_reply_to_id}`);
+          const ancestor = response.data;
+
+          dispatch(importFetchedStatus(ancestor, { bogusQuotePolicy }));
+          dispatch({
+            type: TIMELINE_UPDATE,
+            timeline,
+            status: ancestor,
+            usePendingItems: preferPendingItems,
+          });
+        } catch (err) {
+          // 404 (삭제), 403 (차단/private/DM 미언급) 등 — 가시성 없으면
+          // ancestor 없이 답글만 표시. 사용자 경험상 자연스러움.
+        }
+      }
+    }
+    // ──────────────────────────────────────────────────────
 
     dispatch(importFetchedStatus(status, { bogusQuotePolicy }));
 
