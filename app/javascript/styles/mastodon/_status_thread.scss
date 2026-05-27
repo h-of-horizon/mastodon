@@ -104,3 +104,58 @@
 .status--first-in-thread:not(.status--in-thread) {
   border-top: 0;
 }
+
+// ---------------------------------------------------------------------
+//  홈 타임라인 thread chain — 끊김 없는 연결선
+//
+//  Mastodon 기본 .status__line 시스템은 status 상세 thread view 에 맞춰 설계됨
+//  (cards 가 border 없이 stack). 홈 타임라인은 cards 마다 border-bottom 이 있어
+//  line 사이에 1~24px 시각적 gap 발생.
+//
+//  해결:
+//   (1) chain 안의 카드는 좌측에 직접 연결선 그림 (::before, 카드 top~bottom 전체)
+//   (2) 기본 .status__line 은 숨김 (gap 만들던 주범)
+//   (3) ancestor 카드 (.status__line--full 자식) 의 border-bottom 제거
+//       → 다음 reply 카드와 line 시각적으로 흐름 자연스럽게
+//   (4) root 카드 (.status__line--first 자식) 의 line 은 avatar 아래부터 시작
+//       → Twitter 처럼 avatar 위 영역 안 채움
+//
+//  :has() 셀렉터 사용 — Chrome 105+, Safari 15.4+, Firefox 121+ 지원
+// ---------------------------------------------------------------------
+
+// chain 의 일부인 카드 (어떤 line 이든 자식으로 있음)
+.status:not(.status--in-thread):has(> .status__line) {
+  position: relative;
+
+  // (2) 기본 .status__line 들 모두 숨김 — 우리가 ::before 로 대체
+  & > .status__line {
+    display: none;
+  }
+
+  // (1) 카드 전체 높이를 가로지르는 연결선 — 아바타 가운데 위치에
+  &::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: calc(16px + (44px / 2) - 1px); // padding-left + avatar-half - line-half
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--color-border-primary);
+    z-index: 0;
+    pointer-events: none;
+  }
+}
+
+// (3) ancestor 카드 (자식이 .status__line--full = 아래로 reply 있음): border-bottom 제거
+//     → ::before line 이 다음 카드로 시각적으로 연속됨
+.status:not(.status--in-thread):has(> .status__line--full) {
+  border-bottom: 0;
+}
+
+// (4) root 카드 (자식이 .status__line--first = 위로 부모 없음, 아래로 reply 있음)
+//     line 시작점을 아바타 아래로
+.status:not(.status--in-thread):has(> .status__line--first) {
+  &::before {
+    top: calc(14px + 44px + 4px); // padding-top + avatar + 4px gap
+  }
+}

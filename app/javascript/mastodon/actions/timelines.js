@@ -12,6 +12,8 @@ export { disconnectTimeline } from './timelines_typed';
 
 export const TIMELINE_UPDATE  = 'TIMELINE_UPDATE';
 export const TIMELINE_CLEAR   = 'TIMELINE_CLEAR';
+// Twitter 스타일 thread chain — 이미 timeline 안에 있는 ancestor 를 top 으로 이동
+export const TIMELINE_BUMP_TO_TOP = 'TIMELINE_BUMP_TO_TOP';
 
 export const TIMELINE_EXPAND_REQUEST = 'TIMELINE_EXPAND_REQUEST';
 export const TIMELINE_EXPAND_SUCCESS = 'TIMELINE_EXPAND_SUCCESS';
@@ -44,6 +46,8 @@ export const loadPending = timeline => ({
 // 다시 prepend 하지 않음 (sliding window dedup). 서버측 HomeFeed.rb 의
 // ANCESTOR_DEDUP_WINDOW (5) 와 동일하게 유지.
 const STREAMING_ANCESTOR_DEDUP_WINDOW = 5;
+// chain walking 최대 깊이 — A→B1→...→Bn 깊은 chain 방어. 서버 MAX_CHAIN_DEPTH 와 동일.
+const MAX_CHAIN_DEPTH = 8;
 
 export function updateTimeline(timeline, status, { accept = undefined, bogusQuotePolicy = false } = {}) {
   return async (dispatch, getState) => {
@@ -64,40 +68,7 @@ export function updateTimeline(timeline, status, { accept = undefined, bogusQuot
       return;
     }
 
-    // ─── Twitter 스타일 ancestor 인젝션 (실시간 streaming) ───
-    // 홈 타임라인에 도착한 답글이면 in_reply_to_id 의 원글도 함께 prepend.
-    // (서버측 HomeFeed.rb 의 inject_ancestors 가 fetch 응답엔 처리하지만
-    //  streaming 새 status 는 우회하므로 클라이언트에서 보조)
-    //
-    //  - 직속 parent 1개만 (chain 위로 더 안 올라감)
-    //  - sliding-window dedup: 같은 parent 가 직전 5개 안에 있으면 skip
-    //  - 가시성/차단/뮤트는 서버측 /api/v1/statuses/:id 응답으로 자동 처리
-    //    (못 보는 글이면 4xx → catch 로 silent skip)
-    if (timeline === 'home' && status.in_reply_to_id) {
-      const items = getState().getIn(['timelines', timeline, 'items'], ImmutableList());
-      const recentItems = items.take(STREAMING_ANCESTOR_DEDUP_WINDOW);
-      const ancestorRecentlyShown = recentItems.includes(status.in_reply_to_id);
-
-      if (!ancestorRecentlyShown) {
-        try {
-          const response = await api().get(`/api/v1/statuses/${status.in_reply_to_id}`);
-          const ancestor = response.data;
-
-          dispatch(importFetchedStatus(ancestor, { bogusQuotePolicy }));
-          dispatch({
-            type: TIMELINE_UPDATE,
-            timeline,
-            status: ancestor,
-            usePendingItems: preferPendingItems,
-          });
-        } catch (err) {
-          // 404 (삭제), 403 (차단/private/DM 미언급) 등 — 가시성 없으면
-          // ancestor 없이 답글만 표시. 사용자 경험상 자연스러움.
-        }
-      }
-    }
-    // ──────────────────────────────────────────────────────
-
+    // ─── 1단계: reply 본체를 timeline 의 top 에 추가 ───
     dispatch(importFetchedStatus(status, { bogusQuotePolicy }));
 
     dispatch({
@@ -109,6 +80,71 @@ export function updateTimeline(timeline, status, { accept = undefined, bogusQuot
 
     if (timeline === 'home') {
       dispatch(submitMarkers());
+    }
+
+    // ─── 2단계: Twitter 스타일 chain 재배치 (multi-level) ───
+    // 답글이 도착했을 때 (streaming 이든 사용자 본인 submitCompose 든)
+    // 전체 chain (A → B1 → B2 → ... → reply) 을 reply 위쪽으로 chronological
+    // 순서로 정렬. 서버측 HomeFeed.inject_ancestors 의 BFS 와 동일한 의도.
+    //
+    // 절차:
+    //   1. statuses 스토어를 거슬러 올라가며 chain id 수집 (in_reply_to_id 따라)
+    //   2. chain 의 각 id 를 INNERMOST(직속 parent) → OUTERMOST(root) 순으로 bump.
+    //      각 bump 가 해당 id 를 items 의 top 으로 이동 → 마지막에 root 가 top
+    //   3. chain walk 가 not-in-store ancestor 에서 멈췄으면 그 한 개만 API fetch.
+    //      (더 깊은 ancestor 는 새로고침 시 서버측 BFS 가 채움 — recursive fetch 회피)
+    if (timeline === 'home' && status.in_reply_to_id) {
+      const pendingItems = getState().getIn(['timelines', timeline, 'pendingItems'], ImmutableList());
+      const isPendingMode = preferPendingItems || !pendingItems.isEmpty();
+
+      if (!isPendingMode) {
+        const statuses = getState().get('statuses');
+
+        // (1) chain walk — innermost(직속 parent) 부터 위로
+        const chainIds = [];
+        const visited = new Set([status.id]);
+        let cursor = status.in_reply_to_id;
+        let depth = 0;
+
+        while (cursor && !visited.has(cursor) && depth < MAX_CHAIN_DEPTH) {
+          visited.add(cursor);
+          const ancestorInStore = statuses.get(cursor);
+          if (!ancestorInStore) break; // 스토어에 없으면 chain walk 중단
+          chainIds.push(cursor);
+          cursor = ancestorInStore.get('in_reply_to_id');
+          depth += 1;
+        }
+        // chainIds = [B1, A] (innermost → outermost) 같은 형태
+        // cursor 가 여전히 truthy → chain 이 not-in-store ancestor 에서 멈춤
+
+        // (2) chain bump — INNERMOST 먼저 (그래야 OUTERMOST 가 top 으로 마지막에 옴)
+        chainIds.forEach((id) => {
+          dispatch({
+            type: TIMELINE_BUMP_TO_TOP,
+            timeline,
+            statusId: id,
+          });
+        });
+
+        // (3) chain walk 가 미해결 ancestor 에서 멈췄으면 그것 한 개 fetch
+        //     (예: 미팔로우 사용자의 답글 chain — 그 사람 글들이 스토어에 없음)
+        if (cursor && depth < MAX_CHAIN_DEPTH) {
+          try {
+            const response = await api().get(`/api/v1/statuses/${cursor}`);
+            const ancestor = response.data;
+            dispatch(importFetchedStatus(ancestor, { bogusQuotePolicy }));
+            dispatch({
+              type: TIMELINE_UPDATE,
+              timeline,
+              status: ancestor,
+              usePendingItems: preferPendingItems,
+            });
+            // → items: [fetched_root, ...chain..., reply, ...]
+          } catch (err) {
+            // 가시성 없음 (404/403) — chain 에 있는 거까지만 노출
+          }
+        }
+      }
     }
   };
 }

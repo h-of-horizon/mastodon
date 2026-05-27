@@ -13,6 +13,8 @@ class HomeFeed < Feed
   #  - 이미 timeline 안에 parent 가 있으면 중복 X
   # =====================================================================
   ANCESTOR_DEDUP_WINDOW = 5
+  # chain walking 최대 깊이 — A→B1→B2→...→Bn 가 무한 chain 인 corrupted 데이터 방어
+  MAX_CHAIN_DEPTH = 8
 
   def initialize(account)
     @account = account
@@ -22,11 +24,24 @@ class HomeFeed < Feed
   # Override Feed#get — Redis 에서 가져온 statuses 위에 ancestor 인젝션.
   # 반환: Array<Status> (PreloadingConcern 의 preload_collection 이 Array 처리 가능)
   #
-  # 추가: 홈 타임라인에서 DM(direct visibility) 완전 제외 — 정책 정합성.
+  # 정책 (DM 관련 완전 격리):
+  #   (a) DM(direct visibility) 자체 제외
+  #   (b) DM 에 대한 답글(부모가 direct visibility) 제외
+  #       — 답글 본인이 public/unlisted 이어도 DM thread 의 일부면 home 노출 X
+  #
   # FeedManager.filter_from_home 가 write-time 에 이미 차단하지만, Redis 에
-  # 이전부터 남아 있는 DM 까지 즉시 사라지도록 read-time 에서도 한 번 더 필터.
+  # 이전부터 남아 있는 항목까지 즉시 사라지도록 read-time 에서도 한 번 더 필터.
   def get(limit, max_id = nil, since_id = nil, min_id = nil)
-    inject_ancestors(super.where.not(visibility: :direct))
+    statuses = super.where.not(visibility: :direct).to_a
+
+    # (b) DM 의 답글 제거 — 답글의 in_reply_to_id 가 direct status 면 제거
+    reply_ids = statuses.filter_map(&:in_reply_to_id).uniq
+    if reply_ids.any?
+      direct_parent_ids = Status.where(id: reply_ids, visibility: :direct).pluck(:id).to_set
+      statuses = statuses.reject { |s| s.in_reply_to_id && direct_parent_ids.include?(s.in_reply_to_id) } unless direct_parent_ids.empty?
+    end
+
+    inject_ancestors(statuses)
   end
 
   def async_refresh
@@ -57,50 +72,97 @@ class HomeFeed < Feed
     statuses = statuses_relation.to_a
     return statuses if statuses.empty?
 
-    # 모든 reply 의 parent_id 수집 — timeline 안에 있어도 일단 포함.
-    # (self-reply 처럼 parent 가 이미 timeline 에 있는 경우에도 ancestor 가 reply 바로 위에 오도록)
-    parent_ids = statuses.filter_map(&:in_reply_to_id).uniq
-    return statuses if parent_ids.empty?
+    # ── 1단계: BFS 로 chain 전체의 ancestor 들 batch fetch ──
+    # A → B1 → B2 → B3 같은 깊은 self-reply chain 에서 root 까지 거슬러 올라감.
+    # MAX_CHAIN_DEPTH 로 순환 참조 / 데이터 corruption 방어.
+    all_ancestor_ids = Set.new
+    to_fetch = statuses.filter_map(&:in_reply_to_id).uniq
+    fetched = {}
+    depth = 0
 
-    # batch fetch (N+1 회피). DM 은 timeline 노출 정책상 ancestor 로도 inject 안 함.
-    visible_ancestors = Status
-                        .where(id: parent_ids)
-                        .where.not(visibility: :direct)
-                        .includes(:account)
-                        .index_by(&:id)
-                        .select { |_id, ancestor| visible_ancestor?(ancestor) }
+    while to_fetch.any? && depth < MAX_CHAIN_DEPTH
+      next_to_fetch = []
 
-    return statuses if visible_ancestors.empty?
+      # find_each → each — 작은 배치(<100)라 batching 오버헤드 불필요
+      Status.where(id: to_fetch).where.not(visibility: :direct).includes(:account).each do |ancestor|
+        next if fetched.key?(ancestor.id)
 
-    # ★ Twitter 스타일 재배치 알고리즘 ★
-    #   - 각 reply 마다 parent 를 reply 바로 위에 배치
-    #   - parent 가 timeline 의 다른 위치에 이미 있으면 → 거기서 제거하고 reply 위로 이동
-    #   - sliding-window dedup: 같은 parent 가 직전 N 개에 있으면 skip
-    result = []
-    result_ids = Set.new
-    recent_parent_ids = []
+        fetched[ancestor.id] = ancestor
+        all_ancestor_ids.add(ancestor.id)
 
-    statuses.each do |status|
-      parent_id = status.in_reply_to_id
-
-      if parent_id && visible_ancestors[parent_id] && !recent_parent_ids.include?(parent_id)
-        # parent 가 result 의 다른 위치에 이미 있으면 제거 (reply 바로 위로 재배치)
-        result.delete_if { |s| s.id == parent_id } if result_ids.include?(parent_id)
-
-        result << visible_ancestors[parent_id]
-        result_ids.add(parent_id)
-        recent_parent_ids << parent_id
-        recent_parent_ids.shift if recent_parent_ids.size > ANCESTOR_DEDUP_WINDOW
+        # 다음 depth: 방금 fetch 한 ancestor 의 parent 중 아직 안 가져온 것
+        if ancestor.in_reply_to_id && !all_ancestor_ids.include?(ancestor.in_reply_to_id)
+          next_to_fetch << ancestor.in_reply_to_id
+        end
       end
 
-      # status 가 이미 result 에 있으면 (자기가 누군가의 ancestor 로 먼저 inject 됐을 때) skip
-      unless result_ids.include?(status.id)
-        result << status
-        result_ids.add(status.id)
+      to_fetch = next_to_fetch.uniq
+      depth += 1
+    end
+
+    # 가시성 필터 — 차단/뮤트/도메인차단/private(팔로우 안 함)/direct 제외
+    visible_ancestors = fetched.select { |_id, ancestor| visible_ancestor?(ancestor) }
+
+    # 조기 return: 아무 ancestor 도 가시적이지 않으면 원본 그대로
+    return statuses if visible_ancestors.empty? && statuses.none? { |s| s.in_reply_to_id }
+
+    # ── 2단계: 각 status 의 chain 을 chronological 로 빌드 + dedup ──
+    # 결과: [root, mid1, ..., parent, reply] 순서로 result 에 추가
+    # sliding-window dedup: 같은 root 가 직전 N 개 안에 있으면 ancestors skip (reply 만)
+    result = []
+    result_ids = Set.new
+    recent_root_ids = []
+
+    statuses.each do |status|
+      chain = build_chain(status, visible_ancestors)
+      root_id = chain.first.id
+
+      if recent_root_ids.include?(root_id)
+        # 같은 thread 의 다른 reply 가 이미 chain 째 노출됨 → 이번 reply 만 추가
+        append_unique(result, result_ids, status)
+      else
+        # 신선한 chain → root 부터 chronologically 추가
+        chain.each do |s|
+          # 이미 result 의 다른 위치에 있으면 제거 후 재배치 (chain 으로 묶이는 게 우선)
+          result.delete_if { |x| x.id == s.id } if result_ids.include?(s.id)
+          result << s
+          result_ids.add(s.id)
+        end
+
+        recent_root_ids << root_id
+        recent_root_ids.shift if recent_root_ids.size > ANCESTOR_DEDUP_WINDOW
       end
     end
 
     result
+  end
+
+  # status 에서 ancestors 를 거슬러 올라가 chain 을 구성.
+  # 반환: [root, ..., parent, status] (chronological)
+  # 순환 참조 방어 + MAX_CHAIN_DEPTH 제한
+  def build_chain(status, visible_ancestors)
+    chain = [status]
+    seen_in_chain = Set.new([status.id])
+    current = status
+
+    while current.in_reply_to_id &&
+          visible_ancestors[current.in_reply_to_id] &&
+          !seen_in_chain.include?(current.in_reply_to_id) &&
+          chain.size < MAX_CHAIN_DEPTH
+      parent = visible_ancestors[current.in_reply_to_id]
+      chain.unshift(parent)
+      seen_in_chain.add(parent.id)
+      current = parent
+    end
+
+    chain
+  end
+
+  def append_unique(result, result_ids, status)
+    return if result_ids.include?(status.id)
+
+    result << status
+    result_ids.add(status.id)
   end
 
   # ancestor 표시 가시성 — 한 군데서 일괄 결정

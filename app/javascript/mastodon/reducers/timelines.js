@@ -18,6 +18,7 @@ import {
   TIMELINE_MARK_AS_PARTIAL,
   TIMELINE_INSERT,
   TIMELINE_GAP,
+  TIMELINE_BUMP_TO_TOP,
   disconnectTimeline,
 } from '../actions/timelines';
 import {
@@ -214,6 +215,12 @@ export default function timelines(state = initialState, action) {
     return expandNormalizedTimeline(state, action.timeline, fromJS(action.statuses), action.next, action.partial, action.isLoadingRecent, action.usePendingItems);
   case TIMELINE_UPDATE:
     return updateTimeline(state, action.timeline, fromJS(action.status), action.usePendingItems);
+  case TIMELINE_BUMP_TO_TOP:
+    // Twitter 스타일 chain reorder — 이미 timeline 안에 있는 ancestor 를 items 의 top 으로 이동.
+    // status 스토어는 건드리지 않고 timeline.items 리스트의 순서만 변경.
+    return state.updateIn([action.timeline, 'items'], ImmutableList(), items =>
+      items.filterNot(id => id === action.statusId).unshift(action.statusId),
+    );
   case TIMELINE_CLEAR:
     return clearTimeline(state, action.timeline);
   case TIMELINE_SCROLL_TOP:

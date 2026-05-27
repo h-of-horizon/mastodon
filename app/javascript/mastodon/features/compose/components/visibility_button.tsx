@@ -36,6 +36,11 @@ const messages = defineMessages({
     id: 'privacy.quote.disabled',
     defaultMessage: '{visibility}, quotes disabled',
   },
+  // DM 답글 시 visibility 변경 잠금 안내
+  dm_locked: {
+    id: 'compose_form.privacy.dm_locked',
+    defaultMessage: 'DM 답글은 DM(개인 멘션)으로만 전송됩니다',
+  },
 });
 
 interface PrivacyDropdownProps {
@@ -82,6 +87,16 @@ const PrivacyModalButton: FC<PrivacyDropdownProps> = ({ disabled = false }) => {
   const visibility = useAppSelector(
     (state) => state.compose.get('privacy') as StatusVisibility,
   );
+
+  // DM 답글 lock — 답글 대상이 DM(direct visibility) 이면 사용자가 visibility 를
+  // 변경할 수 없게 button disable + tooltip 안내.
+  // 서버측 PostStatusService 가 :direct 로 강제하므로 데이터 안전성은 보장되지만,
+  // 사용자에게 명확한 UX 시그널 제공.
+  const lockedToDirect = useAppSelector((state) => {
+    const replyToId = state.compose.get('in_reply_to') as string | null;
+    if (!replyToId) return false;
+    return state.statuses.getIn([replyToId, 'visibility']) === 'direct';
+  });
 
   const { icon, iconComponent } = useMemo(() => {
     const option = visibilityOptions[visibility];
@@ -135,9 +150,9 @@ const PrivacyModalButton: FC<PrivacyDropdownProps> = ({ disabled = false }) => {
   return (
     <button
       type='button'
-      title={intl.formatMessage(privacyMessages.change_privacy)}
+      title={intl.formatMessage(lockedToDirect ? messages.dm_locked : privacyMessages.change_privacy)}
       onClick={handleOpen}
-      disabled={disabled}
+      disabled={disabled || lockedToDirect}
       className={classNames('dropdown-button')}
     >
       <Icon id={icon} icon={iconComponent} />

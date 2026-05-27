@@ -75,6 +75,11 @@ class PostStatusService < BaseService
     @visibility   = @options[:visibility] || @account.user&.setting_default_privacy
     @visibility   = :unlisted if @visibility&.to_sym == :public && @account.silenced?
     @visibility   = :private if @quoted_status&.private_visibility? && %i(public unlisted).include?(@visibility&.to_sym)
+
+    # 폐쇄형 인스턴스 정책: DM 에 대한 답글은 항상 DM 으로 강제.
+    # 사용자가 web/3rd-party 앱에서 어떤 visibility 보냈든 무시하고 :direct 로 고정.
+    # → DM thread 가 외부 공개 timeline 으로 새는 것 원천 차단.
+    @visibility   = :direct if @in_reply_to&.direct_visibility?
     @scheduled_at = @options[:scheduled_at]&.to_datetime
     @scheduled_at = nil if scheduled_in_the_past?
   rescue ArgumentError
