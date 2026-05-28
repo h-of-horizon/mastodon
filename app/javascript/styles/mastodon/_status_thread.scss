@@ -172,12 +172,13 @@
   cursor: pointer;
   transition: background 0.12s ease, color 0.12s ease;
 
-  // 세로 thread line — indicator 의 full height 를 차지하여 직전 카드(root) 와
-  // 직후 카드(reply) 사이를 끊김 없이 연결. status 카드의 avatar 중심에 가까운
-  // 좌측 위치(약 32-36px) 에 정렬.
+  // 세로 thread line — indicator 의 본문 영역만 차지하여 root/reply 카드의
+  // border 영역을 침범하지 않도록 위/아래 4px 여백. status 카드의 avatar 중심에
+  // 가까운 좌측 위치(약 32-36px) 에 정렬.
   &__line {
     width: 2px;
     margin-left: 32px;
+    margin-block: 4px;
     background: var(--color-border-primary);
     border-radius: 1px;
     flex-shrink: 0;
@@ -207,33 +208,45 @@
   }
 }
 
-// 직전 카드(root) 의 border-bottom 제거 — chain-collapse-indicator 와 시각 연결
-.status:not(.status--in-thread):has(+ .chain-collapse-indicator) {
+// ---------------------------------------------------------------------
+//  Chain merge — wrapper 기준 sibling 셀렉터
+//
+//   ⚠️ 중요: 타임라인에서 각 status 는 .status__wrapper 로 감싸여 렌더되므로
+//   timeline 의 인접 sibling 은 .status 끼리가 아니라 .status__wrapper 끼리.
+//   기존 `.status + .status-reply.first-in-thread` 같은 셀렉터는 매치 안 됨
+//   (각 .status 가 자기 wrapper 안에 갇혀 있어 형제 관계가 아님).
+//
+//   따라서 chain merge (root↔reply 사이 border 제거) 룰은 모두 .status__wrapper
+//   기준의 sibling 셀렉터로 작성. 트위터처럼 "같은 타래는 한 panel" 시각 달성.
+// ---------------------------------------------------------------------
+
+// (3a) chain-collapse-indicator 가 사이에 있을 때 — 직전 wrapper 의 status 와
+//      직후 wrapper 의 status 사이 border 모두 제거 (indicator 가 panel 안에 녹아듦)
+.status__wrapper:has(+ .chain-collapse-indicator) > .status:not(.status--in-thread) {
   border-bottom: 0;
 }
 
-// chain-collapse-indicator 다음 카드(reply) 의 border-top 제거 — 통합 panel 형태
-.chain-collapse-indicator + .status:not(.status--in-thread) {
+.chain-collapse-indicator + .status__wrapper > .status:not(.status--in-thread) {
   border-top: 0;
 }
 
-// ---------------------------------------------------------------------
-// (3) Twitter 식 thread 압축 — [root, reply] 카드 merge.
+// (3b) Twitter 식 thread 압축 — [root, reply] 인접 시 root 의 border-bottom 제거.
 //
 //   HomeFeed.build_chain 이 chain 의 중간 답글을 생략하고 [root, status] 만
-//   반환하므로, status.in_reply_to_id 는 root.id 가 아닌 (생략된) 중간 답글 id 가
-//   됨. 결과 status.jsx 의 connectUp / connectReply 가 모두 false → 위 (1)(2)
+//   반환하면 status.in_reply_to_id 는 root.id 가 아닌 (생략된) 중간 답글 id.
+//   따라서 status.jsx 의 connectUp / connectReply 가 모두 false → 위 (1)(2)
 //   룰이 매치하지 않아 root 와 reply 사이에 1px border 가 남음.
 //
-//   해결: reply 카드가 .status-reply.status--first-in-thread 클래스를 동시에
-//   가지면 그 직전 형제 카드의 border-bottom 을 제거하여 thread panel 처럼 묶음.
+//   해결: 다음 wrapper 의 status 가 reply + first-in-thread 면 현재 wrapper 의
+//   status 의 border-bottom 을 제거하여 같은 panel 시각.
 //
 //   안전성: home_feed.rb 의 inject_ancestors 가 모든 reply 의 직전 카드를
-//   chain ancestor 로 정렬해 반환하므로, 인접 status 가 무관한 카드일 가능성은
-//   극히 낮음 (서버측 정렬에 의해 보장). streaming 도 클라이언트 chain walk 가
-//   root 를 reply 직전으로 BUMP 함.
-.status:not(.status--in-thread):has(
-    + .status-reply.status--first-in-thread:not(.status--in-thread)
-  ) {
+//   chain ancestor 로 정렬해 반환하므로, 인접 카드가 무관한 카드일 가능성 극히
+//   낮음 (서버측 정렬 보장). streaming 도 클라이언트 chain walk 가 root 를 reply
+//   직전으로 BUMP.
+.status__wrapper:has(
+    + .status__wrapper > .status-reply.status--first-in-thread:not(.status--in-thread)
+  )
+  > .status:not(.status--in-thread) {
   border-bottom: 0;
 }

@@ -43,8 +43,22 @@ class HomeFeed < Feed
       statuses = statuses.reject { |s| s.in_reply_to_id && direct_parent_ids.include?(s.in_reply_to_id) } unless direct_parent_ids.empty?
     end
 
+    # Pagination cursor — redis-originated statuses 의 oldest ID 만 사용.
+    # inject_ancestors 가 redis 페이지 범위 밖에서 fetch 한 chain root 는 cursor 에
+    # 포함하지 않음. (root.id 를 max_id 로 쓰면 다음 페이지에서 redis fetch 결과 중
+    # 같은 root 의 다른 답글이 또 inject 되어 root.id 가 무한히 다음 cursor 로
+    # 반복 → "더보기" 가 사라지지 않는 무한 loop 발생.)
+    unless statuses.empty?
+      @pagination_max_id = statuses.last.id   # redis ZSET reverse range → last = oldest
+      @pagination_since_id = statuses.first.id # first = newest
+    end
+
     inject_ancestors(statuses)
   end
+
+  # 컨트롤러가 pagination header 생성 시 사용 — inject_ancestors 결과 (Array) 의
+  # min/max 가 아닌, redis-originated raw statuses 기준 cursor.
+  attr_reader :pagination_max_id, :pagination_since_id
 
   def async_refresh
     @async_refresh ||= AsyncRefresh.new(redis_regeneration_key)

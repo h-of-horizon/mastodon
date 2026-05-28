@@ -245,11 +245,13 @@ h4 {
   overflow-wrap: anywhere;
 }
 
-// (2) 답글 미리보기 / 인용 표시 — 작성창과 동일한 폰트 사이즈/줄높이 (D-4)
-//     본문(15.5px) 보다 살짝 큰 16px 로 통일해 작성창과 시각적 연결
+// (2) 답글 미리보기 / 인용 표시 — 좌측 패널의 기본 폰트(.column-link, 17px) 와
+//     통일하여 답글 작성 모드 진입 시 폰트 사이즈 차이로 인한 위화감 제거.
+//     (이전: 16px 로 작성창 textarea 와 맞췄으나, 좌측 패널 전반의 기본 사이즈가
+//     17px 이므로 그쪽에 맞추는 것이 시각적으로 더 일관됨.)
 .reply-indicator__content,
 .status__quote .status__content {
-  font-size: 16px;
+  font-size: 17px;
   letter-spacing: -0.003em;
   line-height: 1.55;
   word-break: keep-all;

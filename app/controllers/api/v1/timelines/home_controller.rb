@@ -42,19 +42,21 @@ class Api::V1::Timelines::HomeController < Api::V1::Timelines::BaseController
   end
 
   def account_home_feed
-    HomeFeed.new(current_account)
+    # Memoize 필수 — pagination cursor 가 HomeFeed instance 의 @pagination_max_id
+    # 를 사용하므로, show 액션과 next_path 콜백에서 같은 instance 를 공유해야 함.
+    @account_home_feed ||= HomeFeed.new(current_account)
   end
 
-  # HomeFeed#inject_ancestors 가 chain 순서([root, parent, reply, ...]) 로 재배치
-  # 하므로 @statuses 가 더 이상 ID 내림차순이 아님. 이 때문에 기본 pagination 의
-  # `last.id` (= 가장 오래된 항목 가정) 가 깨져서 "더보기" 시 잉여/중복 페이지가
-  # 발생함. 실제 min/max ID 를 명시적으로 계산해 정확한 커서를 보장.
+  # Pagination cursor — HomeFeed#get 이 raw_statuses (redis-originated) 의 oldest/
+  # newest ID 를 저장. inject_ancestors 가 chain compress 로 추가한 root 가
+  # redis 페이지 범위 밖일 수 있으므로, 그 ID 를 cursor 로 쓰면 다음 페이지에서
+  # 같은 root 가 또 등장하여 무한 loop 발생. raw statuses 기준 cursor 가 정확.
   def pagination_max_id
-    @statuses.map(&:id).min
+    account_home_feed.pagination_max_id
   end
 
   def pagination_since_id
-    @statuses.map(&:id).max
+    account_home_feed.pagination_since_id
   end
 
   def next_path
