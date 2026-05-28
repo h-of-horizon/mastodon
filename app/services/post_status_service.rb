@@ -76,9 +76,17 @@ class PostStatusService < BaseService
     @visibility   = :unlisted if @visibility&.to_sym == :public && @account.silenced?
     @visibility   = :private if @quoted_status&.private_visibility? && %i(public unlisted).include?(@visibility&.to_sym)
 
+    # 폐쇄형 인스턴스 정책 — visibility 옵션 제한:
+    # web UI 에서는 unlisted ('조용한 공개') / private ('팔로워') 옵션 제거하였으나
+    # 3rd-party 앱 또는 사용자 default_privacy 가 이미 unlisted/private 로 저장된 경우
+    # 그 visibility 로 status 가 들어올 수 있음. 일관성 위해 서버측에서 강제로 public 변환.
+    # direct (DM) 는 별도 정책 — /conversations 메뉴 진입 후 작성 가능하므로 유지.
+    @visibility   = :public if %i(unlisted private).include?(@visibility&.to_sym)
+
     # 폐쇄형 인스턴스 정책: DM 에 대한 답글은 항상 DM 으로 강제.
     # 사용자가 web/3rd-party 앱에서 어떤 visibility 보냈든 무시하고 :direct 로 고정.
     # → DM thread 가 외부 공개 timeline 으로 새는 것 원천 차단.
+    # (위 unlisted/private → public 변환 다음에 와야 DM-reply 우선 처리됨)
     @visibility   = :direct if @in_reply_to&.direct_visibility?
     @scheduled_at = @options[:scheduled_at]&.to_datetime
     @scheduled_at = nil if scheduled_in_the_past?

@@ -3,6 +3,13 @@
 //
 //  이 파일은 application.scss(default 테마) + twitter-light/dark/dim.scss
 //  4개 진입점 모두에서 @use 됩니다.
+//
+//  브라우저 호환성 (:has() 사용):
+//   chain merge 및 DM prepend 룰이 CSS :has() 셀렉터를 사용합니다.
+//   지원: Chrome 105+, Safari 15.4+, Firefox 121+, Edge 105+.
+//   구형 브라우저는 :has() invalid selector 로 인식 → 그 룰만 무시되고
+//   다른 룰은 정상 적용. fallback 동작: chain merge 안 됨, 카드 사이 1px border
+//   표시 (mastodon base 동작). 별도 명시적 fallback 룰 불필요 — 자연 degradation.
 // =============================================================================
 
 // ---------------------------------------------------------------------
@@ -113,6 +120,22 @@ article:has(+ article .status__wrapper > .status-reply:not(.status--in-thread))
 // (4) 모든 reply 의 border-top 제거 — 위 article 의 status 와 panel 통합
 .status__wrapper > .status-reply:not(.status--in-thread) {
   border-top: 0;
+}
+
+// (5) 답글 카드의 'Replying to @user' prepend 숨김 — 직속 부모가 같이 inject 된 경우.
+//
+//   트위터 동작: root 카드가 같은 panel 에 있으면 답글 카드의 'Replying to @user'
+//   prepend 표시 안 함 (시각 중복). root 가 timeline 에 없을 때만 prepend 로 컨텍스트 표시.
+//
+//   article + article 선택자 — 직전 article 이 있는 답글만 매치. home_feed.rb 의
+//   inject_ancestors 가 직속 부모를 답글 직전에 강제 배치하므로 prev article 이
+//   부모일 가능성 95%+ (안전). 첫 timeline article (prev 없음) 의 답글은 prepend
+//   유지 → 컨텍스트 제공.
+//
+//   .status__wrapper-reply 클래스: 답글일 때 자동 부여 (status.jsx). 답글의 prepend 만 매치.
+//   show-thread-link 와 정반대 조건 (link: 부모 없을 때만 표시).
+article + article .status__wrapper-reply > .status__prepend {
+  display: none;
 }
 
 // ---------------------------------------------------------------------
@@ -270,19 +293,57 @@ article:has(.show-thread-link) .status:not(.status--in-thread) {
 }
 
 // ---------------------------------------------------------------------
-//  .status-direct 제거 — DM 메뉴 분리 후 타임라인 DM 시각 마커 불필요
+//  DM 시각 마커 완전 제거 — 모든 테마, 모든 DM 관련 selector
 //
-//   업스트림 mastodon (components.scss) 와 twitter/_dm.scss 가 .status-direct 에
-//   주황 배경 + 좌측 보더(!important) 를 적용. DM 이 /conversations 메뉴로 완전
-//   분리된 정책상 home/notification 등에 DM 자체가 안 보이므로 시각 마커 의미 없음.
+//   사용자 정책: DM 메뉴 분리 후 타임라인/상세 페이지에서 DM 자체가 일반 메시지처럼
+//   보이도록. 주황 배경(트위터 _dm.scss), brand-softest 배경(mastodon base) 모두 제거.
 //
-//   override !important 사용 — 업스트림이 !important 박았기 때문에 필수.
-//   .notification-direct, .notification__dm-badge 등 다른 DM 마커는 유지.
+//   대상 selector:
+//    • .status-direct — 업스트림 base + twitter/_dm.scss (높은 specificity)
+//    • .status__wrapper-direct — base components.scss 의 brand-softest 배경
+//    • .detailed-status__wrapper-direct — 상세 페이지 detailed-status 의 brand-softest 배경
+//
+//   selector specificity 를 base 룰과 동등 이상으로 매칭 + !important 로 강제.
+//   _status_thread.scss 가 4개 entry 의 마지막에 import 되므로 source order 우선.
 // ---------------------------------------------------------------------
-.status-direct {
+.status-direct,
+html .status-direct,
+.scrollable .status-direct {
   background-color: transparent !important;
   border-inline-start: 0 !important;
   border-left: 0 !important;
+  border-left-width: 0 !important;
+  border-left-style: none !important;
+  border-left-color: transparent !important;
+}
+
+// wrapper-direct — base 의 brand-softest 배경 제거
+.status__wrapper-direct,
+html .status__wrapper-direct,
+.scrollable .status__wrapper-direct {
+  background: transparent !important;
+
+  &:focus {
+    background: transparent !important;
+  }
+
+  // brand color 로 강조된 prepend 도 일반 색으로
+  .status__prepend {
+    color: var(--color-text-secondary) !important;
+  }
+}
+
+// detailed-status__wrapper-direct — 상세 페이지의 DM 배경 제거
+.detailed-status__wrapper-direct,
+html .detailed-status__wrapper-direct {
+  .detailed-status,
+  .detailed-status__action-bar {
+    background: transparent !important;
+  }
+
+  .status__prepend {
+    color: var(--color-text-secondary) !important;
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -339,4 +400,140 @@ article:has(.show-thread-link) .status:not(.status--in-thread) {
 // ---------------------------------------------------------------------
 .status {
   position: relative;
+}
+
+// ---------------------------------------------------------------------
+//  설정 페이지 (.admin-wrapper) 타이포 통일 — 4 테마 공통
+//
+//   사용자 정책: /settings/* 페이지의 가독성 향상.
+//   - Pretendard + palt OT 피처 (body 상속이지만 안전 위해 명시)
+//   - letter-spacing: 한글 본문 -0.003em
+//   - 정보 계층 명확 (h1 28px → h2 18px → label 14px → hint 13px)
+//   - line-height 본문 1.6 (장문 가독성)
+// ---------------------------------------------------------------------
+.admin-wrapper {
+  font-feature-settings:
+    'palt' 1,
+    'kern' 1,
+    'calt' 1;
+  letter-spacing: -0.003em;
+
+  .content__heading h1,
+  > .content > .content__heading h1 {
+    font-size: 28px;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    font-weight: 700;
+  }
+
+  h2 {
+    font-size: 18px;
+    line-height: 1.4;
+    letter-spacing: -0.005em;
+    font-weight: 600;
+  }
+
+  h3,
+  h4 {
+    font-size: 16px;
+    line-height: 1.4;
+    letter-spacing: -0.005em;
+    font-weight: 600;
+  }
+
+  // 섹션 설명문 (privacy_hint_html 등)
+  p,
+  p.lead,
+  .hint {
+    font-size: 15px;
+    line-height: 1.6;
+    letter-spacing: -0.003em;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  // form label
+  label {
+    font-size: 14px;
+    line-height: 1.5;
+    letter-spacing: -0.003em;
+  }
+
+  // input field hint (체크박스 옆 설명문)
+  .hint,
+  .label_input .hint,
+  .fields-group .hint {
+    font-size: 13px;
+    line-height: 1.5;
+    letter-spacing: -0.003em;
+    color: var(--color-text-secondary);
+  }
+
+  // form 입력
+  input[type='text'],
+  input[type='email'],
+  input[type='password'],
+  input[type='number'],
+  input[type='url'],
+  textarea,
+  select {
+    font-family: inherit;
+    font-size: 15px;
+    line-height: 1.5;
+    letter-spacing: -0.003em;
+  }
+
+  // 버튼
+  .button,
+  button {
+    font-family: inherit;
+    letter-spacing: -0.003em;
+  }
+
+  .actions .button {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  // 사이드 네비 메뉴 — 가독성 강화
+  .sidebar a {
+    font-family: inherit;
+    letter-spacing: -0.003em;
+  }
+}
+
+// ---------------------------------------------------------------------
+//  모바일 좁은 화면 (≤ 630px) — padding/gap 축소
+//
+//   데스크톱 padding (16px 등) 이 좁은 화면에서 가로 공간 부족 유발. mastodon
+//   의 모바일 breakpoint 630px 에 맞춰 padding/gap 축소. 4 테마 공통 적용.
+// ---------------------------------------------------------------------
+@media (max-width: 630px) {
+  .status {
+    padding: 12px;
+  }
+
+  .detailed-status__action-bar {
+    padding: 8px 12px;
+    gap: 12px;
+  }
+
+  .conversation {
+    padding: 4px;
+
+    &__avatar {
+      padding: 8px;
+    }
+
+    &__content {
+      padding: 8px 4px;
+      padding-inline-end: 10px;
+    }
+  }
+
+  .show-thread-link {
+    // avatar (44) + gap (12) + status padding (12) = 68 → 모바일에선 줄임
+    padding-left: calc(12px + 44px + 8px);
+    padding-right: 12px;
+  }
 }

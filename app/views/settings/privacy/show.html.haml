@@ -27,9 +27,10 @@
   .fields-group
     = f.input :indexable, as: :boolean, wrapper: :with_label
 
+  -# 폐쇄형 인스턴스 정책: '검색엔진에 프로필 페이지 포함하기' (settings.indexable) 항목 숨김 + false 고정.
+  -# hidden input 으로 form 제출 시 항상 false 저장 → UI 에 안 보이지만 값 일관성 유지.
   = f.simple_fields_for :settings, current_user.settings do |ff|
-    .fields-group
-      = ff.input :indexable, wrapper: :with_label
+    = ff.input :indexable, as: :hidden, input_html: { value: 'false' }
 
   %h2= t('privacy.privacy')
 

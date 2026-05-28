@@ -4,7 +4,12 @@ import { CacheFirst } from 'workbox-strategies';
 
 import { handleNotificationClick, handlePush } from './web_push_notifications';
 
-const CACHE_NAME_PREFIX = 'mastodon-';
+// Cache version suffix — 변경 사항 배포 시 bump 하여 이전 캐시 자동 폐기.
+// sw.js 파일 변경 시에만 브라우저가 SW 갱신을 detect 하므로, 자산만 변경하면
+// 캐시 잔존 가능. 큰 변경 배포 시 이 버전을 올리면 새 cache namespace 생성 →
+// 이전 cache 자동 폐기.
+const CACHE_VERSION = 'v2';
+const CACHE_NAME_PREFIX = `mastodon-${CACHE_VERSION}-`;
 
 function openWebCache() {
   return caches.open(`${CACHE_NAME_PREFIX}web`);
@@ -57,11 +62,26 @@ registerRoute(
 // Cause a new version of a registered Service Worker to replace an existing one
 // that is already installed, and replace the currently active worker on open pages.
 self.addEventListener('install', function(event) {
+  // skipWaiting() — install 후 즉시 activate (waiting state 건너뛰기).
+  // 사용자가 페이지 reload 시 새 SW 즉시 활성화되어 cache 갱신 빠름.
+  self.skipWaiting();
   event.waitUntil(Promise.all([openWebCache(), fetchRoot()]).then(([cache, root]) => cache.put('/', root)));
 });
 
 self.addEventListener('activate', function(event) {
-  event.waitUntil(self.clients.claim());
+  // 이전 버전 cache 폐기 — CACHE_VERSION 이 다른 namespace 정리.
+  event.waitUntil(
+    Promise.all([
+      self.clients.claim(),
+      caches.keys().then(names =>
+        Promise.all(
+          names
+            .filter(name => name.startsWith('mastodon-') && !name.startsWith(CACHE_NAME_PREFIX) && !name.startsWith(`m${CACHE_NAME_PREFIX}`))
+            .map(name => caches.delete(name)),
+        ),
+      ),
+    ]),
+  );
 });
 
 self.addEventListener('fetch', function(event) {
