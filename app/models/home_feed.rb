@@ -34,31 +34,45 @@ class HomeFeed < Feed
   # FeedManager.filter_from_home 가 write-time 에 이미 차단하지만, Redis 에
   # 이전부터 남아 있는 항목까지 즉시 사라지도록 read-time 에서도 한 번 더 필터.
   def get(limit, max_id = nil, since_id = nil, min_id = nil)
-    # Chain compress + DM 필터로 redis-originated raw 가 줄어들 수 있으므로 limit 의
-    # 2 배로 fetch 하여 사용자가 "더보기" 한 번 클릭 시 충분한 카드가 채워지도록.
-    # 폐쇄형 인스턴스에서 redis call 부담은 무시 가능. 응답 크기도 ~2 배 정도라
-    # 모바일 네트워크에서도 부담 적음.
-    raw_fetch_limit = limit.to_i * 2
-    statuses = super(raw_fetch_limit, max_id, since_id, min_id).where.not(visibility: :direct).to_a
+    target_size = limit.to_i
+    raw_all = []
+    cursor_max_id = max_id
+    iterations = 0
+    max_iterations = 5
 
-    # (b) DM 의 답글 제거 — 답글의 in_reply_to_id 가 direct status 면 제거
-    reply_ids = statuses.filter_map(&:in_reply_to_id).uniq
-    if reply_ids.any?
-      direct_parent_ids = Status.where(id: reply_ids, visibility: :direct).pluck(:id).to_set
-      statuses = statuses.reject { |s| s.in_reply_to_id && direct_parent_ids.include?(s.in_reply_to_id) } unless direct_parent_ids.empty?
+    # Server-side loop: chain compress / DM 필터로 raw 가 줄어들 수 있어 redis 에서
+    # 여러 페이지를 합쳐 가져옴. raw_all 이 target_size 충분히 채워지거나 redis
+    # 끝에 도달하여 fetch 가 비면 종료.
+    #
+    # 핵심: redis fetch 가 비면 즉시 종료 → raw_all 이 비어 있으면 inject_ancestors
+    # 가 빈 array 반환 → @statuses.empty? → pagination header skip → 클라이언트
+    # hasMore=false. 즉 redis 끝까지 모두 fetch 했고 더 가져올 게 없음을 정확히 표시.
+    while raw_all.size < target_size * 2 && iterations < max_iterations
+      raw_chunk = super(limit, cursor_max_id, since_id, min_id).where.not(visibility: :direct).to_a
+
+      # DM-reply 필터
+      reply_ids = raw_chunk.filter_map(&:in_reply_to_id).uniq
+      if reply_ids.any?
+        direct_parent_ids = Status.where(id: reply_ids, visibility: :direct).pluck(:id).to_set
+        raw_chunk = raw_chunk.reject { |s| s.in_reply_to_id && direct_parent_ids.include?(s.in_reply_to_id) } unless direct_parent_ids.empty?
+      end
+
+      break if raw_chunk.empty? # redis 끝 도달 — 더 fetch 안 함
+
+      raw_all.concat(raw_chunk)
+      cursor_max_id = raw_chunk.last.id # default_scope 'recent' → last = oldest
+      iterations += 1
     end
 
-    # Pagination cursor — redis-originated statuses 의 oldest ID 만 사용.
-    # inject_ancestors 가 redis 페이지 범위 밖에서 fetch 한 chain root 는 cursor 에
-    # 포함하지 않음. (root.id 를 max_id 로 쓰면 다음 페이지에서 redis fetch 결과 중
-    # 같은 root 의 다른 답글이 또 inject 되어 root.id 가 무한히 다음 cursor 로
-    # 반복 → "더보기" 가 사라지지 않는 무한 loop 발생.)
-    unless statuses.empty?
-      @pagination_max_id = statuses.last.id   # default_scope 'recent' (id desc) → last = oldest
-      @pagination_since_id = statuses.first.id # first = newest
+    # Pagination cursor — raw_all 의 oldest ID (마지막 fetch 의 oldest).
+    # inject_ancestors 가 chain root 를 redis 범위 밖에서 fetch 해도 cursor 에는
+    # raw 만 반영 → 같은 root 가 다음 페이지에서 다시 등장하여 무한 loop 되지 않음.
+    unless raw_all.empty?
+      @pagination_max_id = raw_all.last.id
+      @pagination_since_id = raw_all.first.id
     end
 
-    inject_ancestors(statuses)
+    inject_ancestors(raw_all)
   end
 
   # 컨트롤러가 pagination header 생성 시 사용 — inject_ancestors 결과 (Array) 의

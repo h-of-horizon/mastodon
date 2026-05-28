@@ -21,6 +21,11 @@ html[data-color-scheme='light'],
 html[data-color-scheme='dark'] {
   color-scheme: light;
 
+  // --- Avatar (모든 프로필 아이콘 원형 통일) ---
+  // mastodon default 는 8px (라운드 사각형) → 트위터 룩 으로 9999px (원형).
+  // 트위터 테마의 모든 entry 에 동일 적용 (light/dark/dim).
+  --avatar-border-radius: 9999px;
+
   // --- Brand / Accent ---
   --color-twitter-blue: #1d9bf0;
   --color-twitter-blue-hover: #1a8cd8;

@@ -10,6 +10,9 @@ html[data-color-scheme='light'],
 html[data-color-scheme='dark'] {
   color-scheme: dark;
 
+  // --- Avatar (모든 프로필 아이콘 원형 통일) ---
+  --avatar-border-radius: 9999px;
+
   // --- Brand / Accent (다크에서도 동일 블루) ---
   --color-twitter-blue: #1d9bf0;
   --color-twitter-blue-hover: #1a8cd8;

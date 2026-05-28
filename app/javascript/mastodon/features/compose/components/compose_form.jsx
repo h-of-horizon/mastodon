@@ -24,7 +24,7 @@ import { countableText } from '../util/counter';
 
 import { CharacterCounter } from './character_counter';
 import { EditIndicator } from './edit_indicator';
-import { LanguageDropdown } from './language_dropdown';
+// LanguageDropdown 제거 — 한국어 폐쇄형 인스턴스 정책 (compose_form.jsx 의 JSX 에서도 제거됨)
 import { NavigationBar } from './navigation_bar';
 import { PollForm } from "./poll_form";
 import { ReplyIndicator } from './reply_indicator';
@@ -282,7 +282,11 @@ render () {
 
           <div className='compose-form__dropdowns'>
             <VisibilityButton disabled={this.props.isEditing} />
-            <LanguageDropdown />
+            {/*
+              LanguageDropdown 제거 — 한국어 폐쇄형 인스턴스 정책상 다국어 선택 불필요.
+              제거해도 글 submit 시 redux state 의 default language (initial_state) 가
+              그대로 사용되므로 기능적 영향 없음. 4개 테마 모두에 자동 적용.
+            */}
           </div>
 
           {/* CW(열람 주의) 셀렉트 박스 — Twitter/X 스타일 두 색 보더, "기타" 선택 시에만 입력창 노출 */}

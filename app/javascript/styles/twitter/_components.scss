@@ -84,6 +84,9 @@
   .status__avatar,
   .account__avatar {
     border-radius: 9999px;
+    // 투명 PNG 의 투명 영역에 placeholder 배경색이 깔리지 않도록 transparent.
+    // 사용자가 업로드한 파일이 투명하면 투명하게, 불투명하면 불투명하게 그대로 표시.
+    background: transparent;
   }
 }
 
@@ -169,9 +172,10 @@
 }
 
 .detailed-status__action-bar {
-  padding: 4px 0;
+  // 트위터 식 여유 — 4px → 10px 세로, 좌우 16px 추가하여 버튼이 카드와 같은 padding line
+  padding: 10px 16px;
   border-bottom: 1px solid var(--color-border-primary);
-  gap: 8px;
+  gap: 16px; // 8px → 16px, 답글/리트윗/좋아요 버튼 사이 호흡
   justify-content: space-between;
 }
 

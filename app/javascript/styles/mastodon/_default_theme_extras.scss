@@ -1,0 +1,47 @@
+// =============================================================================
+//  Default 테마 추가 UI 조정 — 트위터 테마와 룩 통일
+//
+//  application.scss(default 테마 진입점)에서만 @use 됩니다.
+//  twitter-{light,dark,dim} 진입점은 자체 토큰/컴포넌트 SCSS 에서 이미 동일
+//  효과가 적용되어 있으므로 이 파일을 import 하지 않음.
+//
+//  포함 항목:
+//   (1) 모든 프로필 아이콘 원형 (mastodon default 8px 라운드 사각형 → 9999px 원형)
+//   (2) 아바타 배경 투명 (투명 PNG 가 원본대로 표시되도록 placeholder 색 제거)
+//   (3) detailed-status__action-bar — 답글/리트윗/좋아요 버튼 사이 호흡 확장
+// =============================================================================
+
+// (1) Avatar border-radius 전역 통일
+//  mastodon/basics.scss 의 `--avatar-border-radius: 8px` 를 override.
+//  모든 avatar 컴포넌트 (timeline, header, search dropdown, admin 등) 가
+//  이 변수를 사용하므로 한 줄로 전역 원형 통일.
+html {
+  --avatar-border-radius: 9999px;
+}
+
+// (2) Avatar 배경 투명
+//  mastodon/components.scss 의 `.account__avatar { background: var(--color-bg-tertiary) }`
+//  를 override. 사용자가 업로드한 파일이 투명 PNG 면 투명 영역 그대로 노출,
+//  불투명 파일이면 불투명하게 — 원본 파일 그대로 표시.
+.status__avatar,
+.account__avatar {
+  background: transparent;
+}
+
+// (3) detailed-status__action-bar 호흡 확장
+//  mastodon base 의 좁은 padding 을 트위터 식 여유로 — 카드와 같은 좌우 16px line,
+//  세로 10px 그리고 버튼 사이 16px gap.
+.detailed-status__action-bar {
+  padding: 10px 16px;
+  gap: 16px;
+}
+
+// (4) Reply-indicator 폰트 — 좌측 패널 .column-link 폰트 사이즈와 통일
+//  default 테마의 .column-link 는 16px ([mastodon/components.scss:4065]).
+//  답글 작성 모드에서 좌측 패널에 표시되는 reply-indicator__content 의 폰트가
+//  body 상속으로 14-15px 라 위화감 발생 → 16px 로 통일.
+//  (트위터 테마는 column-link 17px 라 _typography.scss 에서 reply-indicator__content
+//  17px 로 별도 통일됨.)
+.reply-indicator__content {
+  font-size: 16px;
+}

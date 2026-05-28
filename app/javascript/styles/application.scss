@@ -39,3 +39,7 @@
 
 // Status 본문 표시(타래/상세 전문 노출, 더보기 페이드) — 4개 테마 공유.
 @use 'mastodon/status_thread' as status-thread;
+
+// Default 테마 전용 UI 조정 (트위터 테마와 룩 통일) — avatar 원형/투명, action-bar 호흡.
+// 반드시 'mastodon/components' 이후에 위치하여 base 룰을 이김.
+@use 'mastodon/default_theme_extras' as default-theme-extras;
