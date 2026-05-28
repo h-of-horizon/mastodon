@@ -34,7 +34,12 @@ class HomeFeed < Feed
   # FeedManager.filter_from_home 가 write-time 에 이미 차단하지만, Redis 에
   # 이전부터 남아 있는 항목까지 즉시 사라지도록 read-time 에서도 한 번 더 필터.
   def get(limit, max_id = nil, since_id = nil, min_id = nil)
-    statuses = super.where.not(visibility: :direct).to_a
+    # Chain compress + DM 필터로 redis-originated raw 가 줄어들 수 있으므로 limit 의
+    # 2 배로 fetch 하여 사용자가 "더보기" 한 번 클릭 시 충분한 카드가 채워지도록.
+    # 폐쇄형 인스턴스에서 redis call 부담은 무시 가능. 응답 크기도 ~2 배 정도라
+    # 모바일 네트워크에서도 부담 적음.
+    raw_fetch_limit = limit.to_i * 2
+    statuses = super(raw_fetch_limit, max_id, since_id, min_id).where.not(visibility: :direct).to_a
 
     # (b) DM 의 답글 제거 — 답글의 in_reply_to_id 가 direct status 면 제거
     reply_ids = statuses.filter_map(&:in_reply_to_id).uniq
@@ -49,7 +54,7 @@ class HomeFeed < Feed
     # 같은 root 의 다른 답글이 또 inject 되어 root.id 가 무한히 다음 cursor 로
     # 반복 → "더보기" 가 사라지지 않는 무한 loop 발생.)
     unless statuses.empty?
-      @pagination_max_id = statuses.last.id   # redis ZSET reverse range → last = oldest
+      @pagination_max_id = statuses.last.id   # default_scope 'recent' (id desc) → last = oldest
       @pagination_since_id = statuses.first.id # first = newest
     end
 
