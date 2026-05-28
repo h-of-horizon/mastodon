@@ -11,23 +11,20 @@
 // =============================================================================
 
 // ---------------------------------------------------------------------
-//  Collapsed status — line-aligned max-height + 부드러운 mask 페이드
+//  Collapsed status — 라인 단위 깔끔 끊김 (line-clamp)
+//
+//   이전: mask-image 로 하단 1.5em 그라데이션 페이드 → 글자 중간 잘림이 흐릿하게
+//         가려지지만 사용자가 "흐릿하다" 인식.
+//   현재: -webkit-line-clamp 로 14 줄 정확히 끊음 → mask 없이 라인 경계에서 깔끔.
+//         더보기 버튼이 명시적으로 표시되므로 text-overflow ellipsis 불필요 (clip).
 // ---------------------------------------------------------------------
 .status__content.status__content--collapsed {
-  // 14 줄 × 1.55 em ≒ 21.7em — line-height 1.55 기준 라인 경계 일치
-  max-height: 21.7em;
-
-  // 하단 1.5em 부드러운 페이드 — 글자 중간 hard-cut 시각적 제거
-  mask-image: linear-gradient(
-    to bottom,
-    rgb(0 0 0 / 100%) calc(100% - 1.5em),
-    rgb(0 0 0 / 0%) 100%
-  );
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    rgb(0 0 0 / 100%) calc(100% - 1.5em),
-    rgb(0 0 0 / 0%) 100%
-  );
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 14;
+  line-clamp: 14;
+  overflow: hidden;
+  text-overflow: clip; // ellipsis (...) 제거 — 더보기 버튼이 명시적이므로 불필요
   position: relative;
 
   // GPU 레이어 분리 — 저사양 안드로이드 스크롤 perf
@@ -292,6 +289,19 @@ article:has(+ article .chain-collapse-indicator)
 }
 
 .detailed-status__wrapper + .status__wrapper > .status.status--in-thread {
+  border-top: 0;
+}
+
+// (3g) 상세 페이지 — 모든 in-thread reply 의 border-top 제거.
+//
+//   문제 케이스: A 에 답글 B, B2 평행 답글이 있을 때 [A(detailed), B, B2] 순서.
+//   B2.first-in-thread 가 true 가 되어 (connectToRoot true) base 의 border-top 1px
+//   가 적용 → B-B2 사이 보더 그어짐. (3f) 룰은 detailed-status 직속 다음 sibling
+//   만 매치하므로 두 번째+ descendant 는 매치 안 됨.
+//
+//   해결: 모든 status-reply.status--in-thread 의 border-top 0 — 평행 답글, 깊은
+//   chain, ancestors chain 까지 일관되게 통합 panel 시각.
+.status.status--in-thread.status-reply {
   border-top: 0;
 }
 
