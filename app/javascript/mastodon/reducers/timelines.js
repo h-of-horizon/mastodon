@@ -96,10 +96,9 @@ const expandNormalizedTimeline = (state, timeline, statuses, next, isPartial, is
           insertedIds.subtract(oldIds.take(firstIndex), oldIds.skip(lastIndex));
         }).toList();
 
-        // Finally, insert a gap marker if the data is marked as partial by the server
-        if (isPartial && (firstIndex === 0 || oldIds.get(firstIndex - 1) !== TIMELINE_GAP)) {
-          insertedIds = insertedIds.unshift(TIMELINE_GAP);
-        }
+        // 폐쇄형 인스턴스 정책: partial 응답 시 TIMELINE_GAP unshift 비활성.
+        // GAP marker 가 chain 시각 + 더보기 UX 혼란 유발 → 제거.
+        // (서버측 async refresh 가 완료되면 자동 갱신되므로 GAP 없이도 일관성 유지)
 
         return oldIds.take(firstIndex).concat(
           insertedIds,
@@ -190,15 +189,15 @@ const updateTop = (state, timeline, top) => {
   }));
 };
 
-const reconnectTimeline = (state, usePendingItems) => {
+const reconnectTimeline = (state, _usePendingItems) => {
   if (state.get('online')) {
     return state;
   }
 
-  return state.withMutations(mMap => {
-    mMap.update(usePendingItems ? 'pendingItems' : 'items', items => items.first() ? items.unshift(TIMELINE_GAP) : items);
-    mMap.set('online', true);
-  });
+  // 폐쇄형 인스턴스 정책: streaming reconnect 시 TIMELINE_GAP 마커 unshift 비활성.
+  // GAP 가 chain 시각을 깨고 ("더보기" 가 timeline 처음에 등장) "더보기 오류" 호소 유발.
+  // streaming 갱신은 자동 (TIMELINE_UPDATE) 으로 처리되므로 GAP 필요 없음.
+  return state.set('online', true);
 };
 
 /** @type {import('@reduxjs/toolkit').Reducer<typeof initialState>} */
@@ -255,17 +254,12 @@ export default function timelines(state = initialState, action) {
     } else if (unfollowAccountSuccess.match(action)) {
       return filterTimeline('home', state, action.payload.relationship, action.payload.statuses);
     } else if (disconnectTimeline.match(action)) {
+      // 폐쇄형 인스턴스 정책: streaming disconnect 시 TIMELINE_GAP unshift 비활성.
+      // GAP 가 timeline 처음에 "더보기" 버튼으로 노출되어 chain 시각 + 더보기 UX 혼란 유발.
       return state.update(
         action.payload.timeline,
         initialTimeline,
-        (map) => map.set('online', false).update(
-          action.payload.usePendingItems
-            ? 'pendingItems'
-            : 'items',
-          items => items.first()
-            ? items.unshift(TIMELINE_GAP)
-            : items
-        ),
+        (map) => map.set('online', false),
       );
     }
 

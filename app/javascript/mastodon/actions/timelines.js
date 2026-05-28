@@ -233,14 +233,10 @@ export function expandTimeline(timelineId, path, params = {}) {
       dispatch(importFetchedStatuses(response.data));
       dispatch(expandTimelineSuccess(timelineId, response.data, next ? next.uri : null, response.status === 206, isLoadingRecent, isLoadingMore, isLoadingRecent && preferPendingItems));
 
-      if (timelineId === 'home' && !isLoadingMore && !isLoadingRecent) {
-        const now = new Date();
-        const fittingIndex = response.data.findIndex(status => now - (new Date(status.created_at)) > 4 * 3600 * 1000);
-
-        if (fittingIndex !== -1) {
-          dispatch(insertIntoTimeline(timelineId, TIMELINE_SUGGESTIONS, Math.max(1, fittingIndex)));
-        }
-      }
+      // 폐쇄형 인스턴스 정책: TIMELINE_SUGGESTIONS (inline-follow-suggestions) inject 비활성화.
+      // 4시간 이상 오래된 status 위치에 follow 추천 카드 inject 했으나 chain 사이에 끼어
+      // 시각 깨짐. 폐쇄형 한국어 인스턴스에서 follow 추천 자체 불필요.
+      // (TIMELINE_SUGGESTIONS export 자체는 유지 — 다른 곳에서 import 가능하지만 dispatch X)
 
       if (timelineId === 'home') {
         dispatch(submitMarkers());
