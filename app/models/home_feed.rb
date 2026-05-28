@@ -75,30 +75,55 @@ class HomeFeed < Feed
 
   private
 
-  # Twitter 식 chain inject — self-thread 는 전체, 다른 사람 chain 은 직속 부모만.
+  # Twitter 식 chain inject — self-thread 는 전체, 다른 사람 chain 은 직속 부모만 +
+  # 같은 root 의 평행 답글은 newest 하나만 유지 (트위터의 "원글당 답글 chain 하나" 정책).
   #
   # 알고리즘:
   #   1. BFS — 각 답글의 직속 부모 fetch, 부모의 author 가 자식의 author 와 같으면
   #      (self-thread) 그 부모의 부모도 fetch. 다른 author 면 fetch 끝.
-  #   2. 각 raw status 에 대해 self-thread chain (가능한 깊이까지) build
-  #   3. chain 의 각 ancestor 를 status 직전에 insert
+  #   2. **평행 답글 정리** — 같은 chain root 의 직속 답글 (root 의 immediate-child)
+  #      이 다른 답글이면 평행 답글 → newest 하나만 유지, 나머지 제거.
+  #   3. 각 (filtered) raw status 의 chain build → ancestor 를 status 직전에 insert
   def inject_ancestors(statuses)
     return statuses if statuses.empty?
 
     visible_ancestors = fetch_self_thread_ancestors(statuses)
-    return statuses if visible_ancestors.empty?
 
+    # (2) 평행 답글 정리 — 같은 root + 다른 immediate-child = 평행 → newest 만
+    # statuses 가 newest-first 정렬 (default_scope 'recent') 이므로 first hit = newest.
+    seen_immediate_per_root = {}
+    filtered = statuses.select do |status|
+      chain = build_self_thread_chain(status, visible_ancestors)
+      # chain 비어 있음 = 답글 아니거나 부모 visible 안 함 → 그대로 유지
+      next true if chain.empty?
+
+      root = chain.first
+      # immediate-child = root 의 직속 답글.
+      # chain.size > 1 이면 chain[1], 아니면 status 자기 (status 가 root 의 직속 답글)
+      immediate_id = chain.size > 1 ? chain[1].id : status.id
+
+      if seen_immediate_per_root.key?(root.id)
+        # 같은 root 이미 봄. immediate 가 같으면 (같은 chain 안 다른 status — self-thread 의
+        # 중간/leaf) 유지. 다르면 (평행 답글 — 다른 immediate-child) 제거.
+        seen_immediate_per_root[root.id] == immediate_id
+      else
+        seen_immediate_per_root[root.id] = immediate_id
+        true
+      end
+    end
+
+    return filtered if visible_ancestors.empty?
+
+    # (3) filtered statuses 의 chain inject
     result = []
     result_ids = Set.new
 
-    statuses.each do |status|
+    filtered.each do |status|
       chain = build_self_thread_chain(status, visible_ancestors)
 
-      # chain 의 각 ancestor + status 를 result 에 추가 (이미 있으면 skip)
       chain.each do |ancestor|
         next if result_ids.include?(ancestor.id)
 
-        # status 가 result 에 있으면 그 위치에 insert, 없으면 append
         status_idx = result.index { |s| s.id == status.id }
         if status_idx
           result.insert(status_idx, ancestor)
