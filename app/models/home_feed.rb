@@ -13,8 +13,10 @@ class HomeFeed < Feed
   #  - 이미 timeline 안에 parent 가 있으면 중복 X
   # =====================================================================
   ANCESTOR_DEDUP_WINDOW = 5
-  # chain walking 최대 깊이 — A→B1→B2→...→Bn 가 무한 chain 인 corrupted 데이터 방어
-  MAX_CHAIN_DEPTH = 8
+  # chain walking 최대 깊이 — 100+ 단계 chain 도 root 까지 따라가 [root, leaf] 압축 노출.
+  # corrupted data / 무한 chain 방어용 상한 (실용적 한계). 폐쇄 인스턴스에서 chain
+  # 1 단계당 1 batch query 발생하지만 평균 1-2 단계라 평상시 비용 미미.
+  MAX_CHAIN_DEPTH = 200
 
   def initialize(account)
     @account = account
@@ -137,25 +139,34 @@ class HomeFeed < Feed
     result
   end
 
-  # status 에서 ancestors 를 거슬러 올라가 chain 을 구성.
-  # 반환: [root, ..., parent, status] (chronological)
-  # 순환 참조 방어 + MAX_CHAIN_DEPTH 제한
+  # status 에서 ancestors 를 거슬러 올라가 chain 의 root 만 찾고,
+  # 결과는 [root, status] 로 압축 반환 (중간 답글 모두 생략).
+  #
+  # Twitter 식 thread 압축 정책:
+  #   A → B1 → B2 → ... → status chain 에서 홈 타임라인에 [A, status] 만 노출.
+  #   사용자는 reply 카드를 탭하여 상세 페이지에서 전체 chain 확인.
+  # 같은 thread 의 평행 답글(A→B, A→C) 은 inject_ancestors 의 sliding-window
+  # dedup 이 root 의 중복 노출을 막아 [A, B, C] 형태로 정리됨.
+  #
+  # 순환 참조 방어 + MAX_CHAIN_DEPTH 제한 유지.
   def build_chain(status, visible_ancestors)
-    chain = [status]
-    seen_in_chain = Set.new([status.id])
+    seen = Set.new([status.id])
     current = status
+    root = nil
+    depth = 0
 
     while current.in_reply_to_id &&
           visible_ancestors[current.in_reply_to_id] &&
-          !seen_in_chain.include?(current.in_reply_to_id) &&
-          chain.size < MAX_CHAIN_DEPTH
+          !seen.include?(current.in_reply_to_id) &&
+          depth < MAX_CHAIN_DEPTH
       parent = visible_ancestors[current.in_reply_to_id]
-      chain.unshift(parent)
-      seen_in_chain.add(parent.id)
+      seen.add(parent.id)
+      root = parent
       current = parent
+      depth += 1
     end
 
-    chain
+    root ? [root, status] : [status]
   end
 
   def append_unique(result, result_ids, status)

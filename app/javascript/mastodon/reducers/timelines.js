@@ -19,6 +19,7 @@ import {
   TIMELINE_INSERT,
   TIMELINE_GAP,
   TIMELINE_BUMP_TO_TOP,
+  TIMELINE_PRUNE,
   disconnectTimeline,
 } from '../actions/timelines';
 import {
@@ -221,6 +222,16 @@ export default function timelines(state = initialState, action) {
     return state.updateIn([action.timeline, 'items'], ImmutableList(), items =>
       items.filterNot(id => id === action.statusId).unshift(action.statusId),
     );
+  case TIMELINE_PRUNE: {
+    // Twitter 식 chain 압축 — items/pendingItems 에서 특정 IDs 제거.
+    // status entity 자체는 store 에 유지되어 상세 페이지/알림 등 다른 참조처 영향 없음.
+    const idSet = new Set(action.statusIds);
+    return state.update(action.timeline, initialTimeline, map =>
+      map
+        .update('items', ImmutableList(), list => list.filterNot(id => idSet.has(id)))
+        .update('pendingItems', ImmutableList(), list => list.filterNot(id => idSet.has(id))),
+    );
+  }
   case TIMELINE_CLEAR:
     return clearTimeline(state, action.timeline);
   case TIMELINE_SCROLL_TOP:
