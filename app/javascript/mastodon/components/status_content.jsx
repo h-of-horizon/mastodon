@@ -20,7 +20,9 @@ import { injectIntl } from './intl';
 import { HandledLink } from './status/handled_link';
 import { compareUrls } from '../utils/compare_urls';
 
-const MAX_HEIGHT = 706; // 22px * 32 (+ 2px padding at the top)
+// SCSS 의 .status__content--collapsed (line-clamp: 14) 와 일치 — 14줄 + 2px padding.
+// 22px line-height 기준. 14줄 이상이면 collapsed 활성화 → line-clamp 가 14줄로 자름.
+const MAX_HEIGHT = 22 * 14 + 2; // 310px
 
 /**
  *

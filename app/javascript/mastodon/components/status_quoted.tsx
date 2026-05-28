@@ -19,8 +19,8 @@ import type { RootState } from 'mastodon/store';
 import { useAppDispatch, useAppSelector } from 'mastodon/store';
 
 import { Button } from './button';
-import { ChainCollapseIndicator } from './chain_collapse_indicator';
 import { IconButton } from './icon_button';
+import { ShowThreadLink } from './show_thread_link';
 import type { StatusHeaderRenderFn } from './status/header';
 import { StatusHeader } from './status/header';
 
@@ -362,7 +362,6 @@ export const QuotedStatus: React.FC<QuotedStatusProps> = ({
 export interface StatusQuoteManagerProps {
   id: string;
   contextType?: string;
-  previousId?: string;
   [key: string]: unknown;
 }
 
@@ -370,10 +369,6 @@ export interface StatusQuoteManagerProps {
  * This wrapper component takes a status ID and, if the associated status
  * is a quote post, it renders the quote into `StatusContainer` as a child.
  * It passes all other props through to `StatusContainer`.
- *
- * Twitter 식 chain 압축 — home_feed.rb 의 build_chain 이 [root, leaf] 만 반환하므로
- * leaf.in_reply_to_id 가 previousId(=root.id) 와 다르면 중간 답글이 생략된 상태.
- * 이 때 카드 위에 "더 많은 답글 보기" indicator 를 inject.
  */
 
 export const StatusQuoteManager = (props: StatusQuoteManagerProps) => {
@@ -383,37 +378,31 @@ export const StatusQuoteManager = (props: StatusQuoteManagerProps) => {
     return reblogId ? state.statuses.get(reblogId) : status;
   });
 
-  // Chain 압축 감지: 직전 카드가 root (in_reply_to_id 없음) 이고,
-  // 현재 카드의 in_reply_to_id 가 직전 카드의 id 와 다르면 중간 답글이 생략됨.
-  //
-  // contextType === 'home' 으로 제한하는 이유:
-  //   서버측 build_chain 압축은 HomeFeed 만 적용 (list/hashtag/account timeline
-  //   은 미적용). 클라이언트 감지가 모든 timeline 에서 발동되면 우연히 인접한
-  //   두 글이 root-reply 패턴일 때 false positive indicator 발생. home 만
-  //   제한하여 서버측 압축 정책과 일관성 유지.
-  const showChainCollapse = useAppSelector((state) => {
+  // Twitter 식 "Show this thread" link 표시 조건:
+  //   • home timeline 일 때만 (contextType === 'home')
+  //   • status 가 답글 (in_reply_to_id 있음)
+  //   • 직속 부모가 home timeline 의 items 에 없음 — 즉 home_feed.rb 의
+  //     self-thread 추적 / 직속 부모 inject 가 부모를 채우지 못한 상태
+  // 이런 경우 사용자가 답글의 컨텍스트를 보려면 상세 페이지로 이동해야 하므로
+  // 카드 아래에 link 표시.
+  const showThreadLink = useAppSelector((state) => {
     if (props.contextType !== 'home') return false;
-    if (!props.previousId) return false;
     const currentStatus = state.statuses.get(props.id);
-    const previousStatus = state.statuses.get(props.previousId);
-    if (!currentStatus || !previousStatus) return false;
-    const inReplyToId = currentStatus.get('in_reply_to_id') as string | null;
+    const inReplyToId = currentStatus?.get('in_reply_to_id') as string | null;
     if (!inReplyToId) return false;
-    if (previousStatus.get('in_reply_to_id')) return false;
-    if (inReplyToId === previousStatus.get('id')) return false;
-    return true;
+    const items = state.timelines.getIn(['home', 'items']) ?? null;
+    if (!items) return false;
+    // items 는 ImmutableList<string> — includes 로 timeline 에 있는지 검사
+    return !(items as unknown as { includes: (id: string) => boolean }).includes(inReplyToId);
   });
 
   const quote = status?.get('quote') as QuoteMap | undefined;
 
-  const indicator = showChainCollapse && props.previousId ? (
-    <ChainCollapseIndicator rootId={props.previousId} />
-  ) : null;
+  const threadLink = showThreadLink ? <ShowThreadLink statusId={props.id} /> : null;
 
   if (quote) {
     return (
       <>
-        {indicator}
         <StatusContainer {...props}>
           <QuotedStatus
             quote={quote}
@@ -421,14 +410,15 @@ export const StatusQuoteManager = (props: StatusQuoteManagerProps) => {
             contextType={props.contextType}
           />
         </StatusContainer>
+        {threadLink}
       </>
     );
   }
 
   return (
     <>
-      {indicator}
       <StatusContainer {...props} />
+      {threadLink}
     </>
   );
 };

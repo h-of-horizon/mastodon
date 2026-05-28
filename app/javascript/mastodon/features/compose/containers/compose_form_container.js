@@ -58,7 +58,10 @@ const mapStateToProps = state => ({
     && !state.getIn(['settings', 'dismissed_banners', PRIVATE_QUOTE_MODAL_ID]),
   isInReply: state.getIn(['compose', 'in_reply_to']) !== null,
   lang: state.getIn(['compose', 'language']),
-  maxChars: state.getIn(['server', 'server', 'configuration', 'statuses', 'max_characters'], 500),
+  // Default 2000 — 사용자 인스턴스의 status_length_validator MAX_CHARS 와 일치.
+  // 서버 응답 도착 전 500 (mastodon 표준) 으로 표시되어 사용자가 500→2000 깜빡임을
+  // 보는 문제 해결. 서버 응답이 다른 값이면 그 값으로 갱신.
+  maxChars: state.getIn(['server', 'server', 'configuration', 'statuses', 'max_characters'], 2000),
 });
 
 const mapDispatchToProps = (dispatch, props) => ({

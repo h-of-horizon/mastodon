@@ -9,9 +9,7 @@ import Overlay from 'react-overlays/Overlay';
 
 import type { StatusVisibility } from '@/mastodon/api_types/statuses';
 import MailIcon from '@/material-icons/400-24px/mail.svg?react';
-import LockIcon from '@/material-icons/400-24px/lock.svg?react';
 import PublicIcon from '@/material-icons/400-24px/public.svg?react';
-import QuietTimeIcon from '@/material-icons/400-24px/quiet_time.svg?react';
 import { DropdownSelector } from 'mastodon/components/dropdown_selector';
 import { Icon } from 'mastodon/components/icon';
 
@@ -103,6 +101,8 @@ const PrivacyDropdown: React.FC<PrivacyDropdownProps> = ({
     [registerPreviousFocusTarget],
   );
 
+  // 폐쇄형 인스턴스 정책: '조용한 공개' (unlisted) 와 '팔로워' (private) 옵션 제거.
+  // public 과 direct (DM) 만 노출.
   const options = [
     {
       icon: 'globe',
@@ -110,21 +110,6 @@ const PrivacyDropdown: React.FC<PrivacyDropdownProps> = ({
       value: 'public',
       text: intl.formatMessage(messages.public_short),
       meta: intl.formatMessage(messages.public_long),
-    },
-    {
-      icon: 'unlock',
-      iconComponent: QuietTimeIcon,
-      value: 'unlisted',
-      text: intl.formatMessage(messages.unlisted_short),
-      meta: intl.formatMessage(messages.unlisted_long),
-      extra: intl.formatMessage(messages.unlisted_extra),
-    },
-    {
-      icon: 'lock',
-      iconComponent: LockIcon,
-      value: 'private',
-      text: intl.formatMessage(messages.private_short),
-      meta: intl.formatMessage(messages.private_long),
     },
   ];
 

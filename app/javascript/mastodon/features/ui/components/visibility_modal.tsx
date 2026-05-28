@@ -17,9 +17,7 @@ import { messages as privacyMessages } from '@/mastodon/features/compose/compone
 import { createAppSelector, useAppSelector } from '@/mastodon/store';
 import AlternateEmailIcon from '@/material-icons/400-24px/alternate_email.svg?react';
 import CloseIcon from '@/material-icons/400-24px/close.svg?react';
-import LockIcon from '@/material-icons/400-24px/lock.svg?react';
 import PublicIcon from '@/material-icons/400-24px/public.svg?react';
-import QuietTimeIcon from '@/material-icons/400-24px/quiet_time.svg?react';
 
 import type { BaseConfirmationModalProps } from './confirmation_modals/confirmation_modal';
 
@@ -136,14 +134,9 @@ export const VisibilityModal: FC<VisibilityModalProps> = forwardRef(
     );
 
     const visibilityItems = useMemo<SelectItem<StatusVisibility>[]>(() => {
+      // 폐쇄형 인스턴스 정책: '조용한 공개' (unlisted) 와 '팔로워' (private) 옵션 제거.
+      // public 과 direct (DM) 만 사용자에게 노출.
       const items: SelectItem<StatusVisibility>[] = [
-        {
-          value: 'private',
-          text: intl.formatMessage(privacyMessages.private_short),
-          meta: intl.formatMessage(privacyMessages.private_long),
-          icon: 'lock',
-          iconComponent: LockIcon,
-        },
         {
           value: 'direct',
           text: intl.formatMessage(privacyMessages.direct_short),
@@ -154,22 +147,13 @@ export const VisibilityModal: FC<VisibilityModalProps> = forwardRef(
       ];
 
       if (!disablePublicVisibilities) {
-        items.unshift(
-          {
-            value: 'public',
-            text: intl.formatMessage(privacyMessages.public_short),
-            meta: intl.formatMessage(privacyMessages.public_long),
-            icon: 'globe',
-            iconComponent: PublicIcon,
-          },
-          {
-            value: 'unlisted',
-            text: intl.formatMessage(privacyMessages.unlisted_short),
-            meta: intl.formatMessage(privacyMessages.unlisted_long),
-            icon: 'unlock',
-            iconComponent: QuietTimeIcon,
-          },
-        );
+        items.unshift({
+          value: 'public',
+          text: intl.formatMessage(privacyMessages.public_short),
+          meta: intl.formatMessage(privacyMessages.public_long),
+          icon: 'globe',
+          iconComponent: PublicIcon,
+        });
       }
 
       return items;

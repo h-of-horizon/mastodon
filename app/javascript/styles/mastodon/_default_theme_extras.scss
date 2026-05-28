@@ -45,3 +45,38 @@ html {
 .reply-indicator__content {
   font-size: 16px;
 }
+
+// (5) 한국어 가독성 — Pretendard + palt + letter-spacing 최소화 + line-height 여유
+//
+//  default 테마의 mastodon base 가 letter-spacing 명시 안 함 + line-height 1.5 사용.
+//  한국어 본문에서 1.6 line-height + 약간 좁은 자간이 시각 부담 ↓ + palt OT 피처가
+//  한글 비례 공백 처리. 4개 테마 일관성 위해 동일 정책.
+body,
+.system-font body,
+body.app-body {
+  font-feature-settings:
+    'palt' 1,
+    'kern' 1,
+    'calt' 1;
+  font-optical-sizing: auto;
+  text-rendering: optimizelegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.003em;
+}
+
+.status__content,
+.reply-indicator__content {
+  line-height: 1.6;
+  letter-spacing: -0.003em;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.detailed-status .status__content,
+.detailed-status .status__content__text {
+  line-height: 1.65;
+  letter-spacing: -0.002em;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}

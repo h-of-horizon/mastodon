@@ -2,82 +2,51 @@
 
 class HomeFeed < Feed
   # =====================================================================
-  #  Twitter 스타일 ancestor 인젝션
+  #  Twitter 식 chain 처리 — self-thread 전체 inject + 다른 사람 chain 은 직속 부모만
   #
-  #  답글(in_reply_to_id 가 있는 status) 위에 immediate parent status 를
-  #  자동으로 끼워 노출해 답글이 문맥 없이 떠 있지 않게 함.
+  #  정책:
+  #   • Self-thread (사용자가 자기 답글로 만든 chain): root 까지 전체 inject.
+  #     트위터의 "사용자의 self-thread 는 한 panel" 동작과 일치.
+  #   • 다른 사람과의 chain (작성자가 다른 사용자의 글에 답글): 직속 부모만 inject.
+  #     그 위 grand-parent 는 추적 X. 답글 카드 아래에 "이어지는 글타래 보기" link
+  #     로 사용자가 상세 페이지로 이동 가능 (status_quoted.tsx 의 ShowThreadLink).
   #
-  #  - 직속 parent 1개만 (chain 위로 더 안 올라감)
-  #  - sliding-window dedup: 같은 parent 가 직전 N개 안에 등장했으면 재출현 X
-  #  - 안 보이는 ancestor (삭제/차단/뮤트/도메인차단/비공개/DM 등)는 skip
-  #  - 이미 timeline 안에 parent 가 있으면 중복 X
+  #  BFS 알고리즘 (max_depth 50 안전 제한):
+  #   1. raw statuses 의 직속 부모 batch fetch
+  #   2. 각 부모가 자기 자식의 author 와 같은 (self-thread) 인 경우만 grand-parent fetch
+  #   3. 다른 author 면 chain 끝 — 더 이상 fetch X
+  #
+  #  DM 격리 정책 유지:
+  #   (a) 답글이 DM 인 경우 home 노출 X (read-time 필터)
+  #   (b) DM 의 답글 (부모가 direct) 도 home 노출 X
+  #   (c) ancestor 가 DM 이면 inject 안 함 (visible_ancestor? 에서 차단)
   # =====================================================================
-  ANCESTOR_DEDUP_WINDOW = 5
-  # chain walking 최대 깊이 — 100+ 단계 chain 도 root 까지 따라가 [root, leaf] 압축 노출.
-  # corrupted data / 무한 chain 방어용 상한 (실용적 한계). 폐쇄 인스턴스에서 chain
-  # 1 단계당 1 batch query 발생하지만 평균 1-2 단계라 평상시 비용 미미.
-  MAX_CHAIN_DEPTH = 200
+
+  MAX_SELF_THREAD_DEPTH = 50
 
   def initialize(account)
     @account = account
     super(:home, account.id)
   end
 
-  # Override Feed#get — Redis 에서 가져온 statuses 위에 ancestor 인젝션.
-  # 반환: Array<Status> (PreloadingConcern 의 preload_collection 이 Array 처리 가능)
-  #
-  # 정책 (DM 관련 완전 격리):
-  #   (a) DM(direct visibility) 자체 제외
-  #   (b) DM 에 대한 답글(부모가 direct visibility) 제외
-  #       — 답글 본인이 public/unlisted 이어도 DM thread 의 일부면 home 노출 X
-  #
-  # FeedManager.filter_from_home 가 write-time 에 이미 차단하지만, Redis 에
-  # 이전부터 남아 있는 항목까지 즉시 사라지도록 read-time 에서도 한 번 더 필터.
   def get(limit, max_id = nil, since_id = nil, min_id = nil)
-    target_size = limit.to_i
-    raw_all = []
-    cursor_max_id = max_id
-    iterations = 0
-    max_iterations = 5
+    statuses = super.where.not(visibility: :direct).to_a
 
-    # Server-side loop: chain compress / DM 필터로 raw 가 줄어들 수 있어 redis 에서
-    # 여러 페이지를 합쳐 가져옴. raw_all 이 target_size 충분히 채워지거나 redis
-    # 끝에 도달하여 fetch 가 비면 종료.
-    #
-    # 핵심: redis fetch 가 비면 즉시 종료 → raw_all 이 비어 있으면 inject_ancestors
-    # 가 빈 array 반환 → @statuses.empty? → pagination header skip → 클라이언트
-    # hasMore=false. 즉 redis 끝까지 모두 fetch 했고 더 가져올 게 없음을 정확히 표시.
-    while raw_all.size < target_size * 2 && iterations < max_iterations
-      raw_chunk = super(limit, cursor_max_id, since_id, min_id).where.not(visibility: :direct).to_a
-
-      # DM-reply 필터
-      reply_ids = raw_chunk.filter_map(&:in_reply_to_id).uniq
-      if reply_ids.any?
-        direct_parent_ids = Status.where(id: reply_ids, visibility: :direct).pluck(:id).to_set
-        raw_chunk = raw_chunk.reject { |s| s.in_reply_to_id && direct_parent_ids.include?(s.in_reply_to_id) } unless direct_parent_ids.empty?
-      end
-
-      break if raw_chunk.empty? # redis 끝 도달 — 더 fetch 안 함
-
-      raw_all.concat(raw_chunk)
-      cursor_max_id = raw_chunk.last.id # default_scope 'recent' → last = oldest
-      iterations += 1
+    # (b) DM 의 답글 제거 — 답글의 in_reply_to_id 가 direct status 면 제거
+    reply_ids = statuses.filter_map(&:in_reply_to_id).uniq
+    if reply_ids.any?
+      direct_parent_ids = Status.where(id: reply_ids, visibility: :direct).pluck(:id).to_set
+      statuses = statuses.reject { |s| s.in_reply_to_id && direct_parent_ids.include?(s.in_reply_to_id) } unless direct_parent_ids.empty?
     end
 
-    # Pagination cursor — raw_all 의 oldest ID (마지막 fetch 의 oldest).
-    # inject_ancestors 가 chain root 를 redis 범위 밖에서 fetch 해도 cursor 에는
-    # raw 만 반영 → 같은 root 가 다음 페이지에서 다시 등장하여 무한 loop 되지 않음.
-    unless raw_all.empty?
-      @pagination_max_id = raw_all.last.id
-      @pagination_since_id = raw_all.first.id
+    # Pagination cursor — redis-originated statuses 의 oldest/newest ID
+    unless statuses.empty?
+      @pagination_max_id = statuses.last.id   # default_scope 'recent' (id desc) → last = oldest
+      @pagination_since_id = statuses.first.id # first = newest
     end
 
-    inject_ancestors(raw_all)
+    inject_ancestors(statuses)
   end
-
-  # 컨트롤러가 pagination header 생성 시 사용 — inject_ancestors 결과 (Array) 의
-  # min/max 가 아닌, redis-originated raw statuses 기준 cursor.
-  attr_reader :pagination_max_id, :pagination_since_id
 
   def async_refresh
     @async_refresh ||= AsyncRefresh.new(redis_regeneration_key)
@@ -101,33 +70,79 @@ class HomeFeed < Feed
     retry if upgrade_redis_key!
   end
 
+  # 컨트롤러가 pagination header 생성 시 사용 — raw statuses 기준 cursor.
+  attr_reader :pagination_max_id, :pagination_since_id
+
   private
 
-  def inject_ancestors(statuses_relation)
-    statuses = statuses_relation.to_a
+  # Twitter 식 chain inject — self-thread 는 전체, 다른 사람 chain 은 직속 부모만.
+  #
+  # 알고리즘:
+  #   1. BFS — 각 답글의 직속 부모 fetch, 부모의 author 가 자식의 author 와 같으면
+  #      (self-thread) 그 부모의 부모도 fetch. 다른 author 면 fetch 끝.
+  #   2. 각 raw status 에 대해 self-thread chain (가능한 깊이까지) build
+  #   3. chain 의 각 ancestor 를 status 직전에 insert
+  def inject_ancestors(statuses)
     return statuses if statuses.empty?
 
-    # ── 1단계: BFS 로 chain 전체의 ancestor 들 batch fetch ──
-    # A → B1 → B2 → B3 같은 깊은 self-reply chain 에서 root 까지 거슬러 올라감.
-    # MAX_CHAIN_DEPTH 로 순환 참조 / 데이터 corruption 방어.
-    all_ancestor_ids = Set.new
+    visible_ancestors = fetch_self_thread_ancestors(statuses)
+    return statuses if visible_ancestors.empty?
+
+    result = []
+    result_ids = Set.new
+
+    statuses.each do |status|
+      chain = build_self_thread_chain(status, visible_ancestors)
+
+      # chain 의 각 ancestor + status 를 result 에 추가 (이미 있으면 skip)
+      chain.each do |ancestor|
+        next if result_ids.include?(ancestor.id)
+
+        # status 가 result 에 있으면 그 위치에 insert, 없으면 append
+        status_idx = result.index { |s| s.id == status.id }
+        if status_idx
+          result.insert(status_idx, ancestor)
+        else
+          result << ancestor
+        end
+        result_ids.add(ancestor.id)
+      end
+
+      unless result_ids.include?(status.id)
+        result << status
+        result_ids.add(status.id)
+      end
+    end
+
+    result
+  end
+
+  # BFS 로 self-thread chain 의 모든 ancestor fetch.
+  # 다른 사람의 답글 (non-self-thread) 인 경우 직속 부모만 fetch 하고 stop.
+  def fetch_self_thread_ancestors(statuses)
+    visible_ancestors = {}
     to_fetch = statuses.filter_map(&:in_reply_to_id).uniq
-    fetched = {}
     depth = 0
 
-    while to_fetch.any? && depth < MAX_CHAIN_DEPTH
+    while !to_fetch.empty? && depth < MAX_SELF_THREAD_DEPTH
+      fetched = Status.where(id: to_fetch).where.not(visibility: :direct).includes(:account).to_a
       next_to_fetch = []
 
-      # find_each → each — 작은 배치(<100)라 batching 오버헤드 불필요
-      Status.where(id: to_fetch).where.not(visibility: :direct).includes(:account).each do |ancestor|
-        next if fetched.key?(ancestor.id)
+      fetched.each do |parent|
+        next if visible_ancestors.key?(parent.id)
+        next unless visible_ancestor?(parent)
 
-        fetched[ancestor.id] = ancestor
-        all_ancestor_ids.add(ancestor.id)
+        visible_ancestors[parent.id] = parent
 
-        # 다음 depth: 방금 fetch 한 ancestor 의 parent 중 아직 안 가져온 것
-        if ancestor.in_reply_to_id && !all_ancestor_ids.include?(ancestor.in_reply_to_id)
-          next_to_fetch << ancestor.in_reply_to_id
+        # Self-thread 검사 — parent 의 author 가 자기 자식의 author 와 같은지.
+        # 자식 = raw statuses 또는 이미 fetched 된 ancestors 중 in_reply_to_id == parent.id 인 것.
+        direct_children_authors = []
+        statuses.each { |s| direct_children_authors << s.account_id if s.in_reply_to_id == parent.id }
+        visible_ancestors.each_value { |a| direct_children_authors << a.account_id if a.in_reply_to_id == parent.id }
+
+        # parent.author 가 어떤 자식의 author 와 같으면 self-thread → grand-parent 도 fetch
+        if parent.in_reply_to_id && direct_children_authors.include?(parent.account_id)
+          next_to_fetch << parent.in_reply_to_id unless visible_ancestors.key?(parent.in_reply_to_id)
         end
       end
 
@@ -135,94 +150,45 @@ class HomeFeed < Feed
       depth += 1
     end
 
-    # 가시성 필터 — 차단/뮤트/도메인차단/private(팔로우 안 함)/direct 제외
-    visible_ancestors = fetched.select { |_id, ancestor| visible_ancestor?(ancestor) }
-
-    # 조기 return: 아무 ancestor 도 가시적이지 않으면 원본 그대로
-    return statuses if visible_ancestors.empty? && statuses.none? { |s| s.in_reply_to_id }
-
-    # ── 2단계: 각 status 의 chain 을 chronological 로 빌드 + dedup ──
-    # 결과: [root, mid1, ..., parent, reply] 순서로 result 에 추가
-    # sliding-window dedup: 같은 root 가 직전 N 개 안에 있으면 ancestors skip (reply 만)
-    result = []
-    result_ids = Set.new
-    recent_root_ids = []
-
-    statuses.each do |status|
-      chain = build_chain(status, visible_ancestors)
-      root_id = chain.first.id
-
-      if recent_root_ids.include?(root_id)
-        # 같은 thread 의 다른 reply 가 이미 chain 째 노출됨 → 이번 reply 만 추가
-        append_unique(result, result_ids, status)
-      else
-        # 신선한 chain → root 부터 chronologically 추가
-        chain.each do |s|
-          # 이미 result 의 다른 위치에 있으면 제거 후 재배치 (chain 으로 묶이는 게 우선)
-          result.delete_if { |x| x.id == s.id } if result_ids.include?(s.id)
-          result << s
-          result_ids.add(s.id)
-        end
-
-        recent_root_ids << root_id
-        recent_root_ids.shift if recent_root_ids.size > ANCESTOR_DEDUP_WINDOW
-      end
-    end
-
-    result
+    visible_ancestors
   end
 
-  # status 에서 ancestors 를 거슬러 올라가 chain 의 root 만 찾고,
-  # 결과는 [root, status] 로 압축 반환 (중간 답글 모두 생략).
+  # Status 부터 self-thread chain 의 root 까지 (또는 다른 author 만나는 직속 부모까지) 거슬러 올라감.
+  # 반환: chronological 순서 [oldest_ancestor, ..., direct_parent] (status 자체는 미포함).
   #
-  # Twitter 식 thread 압축 정책:
-  #   A → B1 → B2 → ... → status chain 에서 홈 타임라인에 [A, status] 만 노출.
-  #   사용자는 reply 카드를 탭하여 상세 페이지에서 전체 chain 확인.
-  # 같은 thread 의 평행 답글(A→B, A→C) 은 inject_ancestors 의 sliding-window
-  # dedup 이 root 의 중복 노출을 막아 [A, B, C] 형태로 정리됨.
-  #
-  # 순환 참조 방어 + MAX_CHAIN_DEPTH 제한 유지.
-  def build_chain(status, visible_ancestors)
-    seen = Set.new([status.id])
+  # 종료 조건:
+  #   • 직속 부모가 visible_ancestors 에 없음 → stop
+  #   • 직속 부모의 author 가 자식의 author 와 다름 (non-self-thread) → 직속 부모만 chain 에 추가하고 stop
+  def build_self_thread_chain(status, visible_ancestors)
+    chain = []
     current = status
-    root = nil
-    depth = 0
 
-    while current.in_reply_to_id &&
-          visible_ancestors[current.in_reply_to_id] &&
-          !seen.include?(current.in_reply_to_id) &&
-          depth < MAX_CHAIN_DEPTH
-      parent = visible_ancestors[current.in_reply_to_id]
-      seen.add(parent.id)
-      root = parent
+    while current.in_reply_to_id && (parent = visible_ancestors[current.in_reply_to_id])
+      chain.unshift(parent)
+
+      # parent 가 자식과 다른 author 면 chain 의 root (또는 root 보다 위) → stop
+      break unless parent.account_id == current.account_id
+
       current = parent
-      depth += 1
     end
 
-    root ? [root, status] : [status]
-  end
-
-  def append_unique(result, result_ids, status)
-    return if result_ids.include?(status.id)
-
-    result << status
-    result_ids.add(status.id)
+    chain
   end
 
   # ancestor 표시 가시성 — 한 군데서 일괄 결정
   #   • 차단/뮤트/도메인차단 한 계정 → X
   #   • suspended / unavailable → X (StatusPolicy 안에서 처리)
   #   • private/limited 인데 팔로우 안 함 → X
-  #   • direct(DM) 인데 본인 미언급 → X
+  #   • direct(DM) → X (DM 격리 정책)
   def visible_ancestor?(ancestor)
     return false unless ancestor
+    return false if ancestor.direct_visibility?
 
     account = ancestor.account
     return false if @account.blocking?(account)
     return false if @account.muting?(account)
     return false if account.domain.present? && @account.domain_blocking?(account.domain)
 
-    # Mastodon 표준 가시성 정책 (suspended / private / direct / 도메인 등 일괄)
     StatusPolicy.new(@account, ancestor).show?
   end
 

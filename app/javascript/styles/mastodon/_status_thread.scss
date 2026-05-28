@@ -1,22 +1,17 @@
 // =============================================================================
 //  Status 본문 표시 — 4개 테마 공통 룰
 //
-//   - 목록 카드(.status)에서 긴 본문은 collapsed (max-height + mask 페이드)
-//   - 상세 화면(.detailed-status), 타래 부모/답글(.status--in-thread)은 전문 노출
-//   - 더보기 버튼 디자인 + 상세/타래에선 숨김
-//
 //  이 파일은 application.scss(default 테마) + twitter-light/dark/dim.scss
-//  4개 진입점 모두에서 @use 됩니다. 이전엔 twitter/_components.scss 에만
-//  있어서 default 테마에서는 룰이 적용되지 않았던 문제 해결.
+//  4개 진입점 모두에서 @use 됩니다.
 // =============================================================================
 
 // ---------------------------------------------------------------------
-//  Collapsed status — 라인 단위 깔끔 끊김 (line-clamp)
+//  Collapsed status — 라인 단위 깔끔 끊김 (line-clamp 14줄)
 //
-//   이전: mask-image 로 하단 1.5em 그라데이션 페이드 → 글자 중간 잘림이 흐릿하게
-//         가려지지만 사용자가 "흐릿하다" 인식.
-//   현재: -webkit-line-clamp 로 14 줄 정확히 끊음 → mask 없이 라인 경계에서 깔끔.
-//         더보기 버튼이 명시적으로 표시되므로 text-overflow ellipsis 불필요 (clip).
+//   긴 글 (15+ 라인) 은 14줄로 line-clamp + 더보기 버튼 표시.
+//   - mask-image (그라데이션 페이드) X — 사용자가 흐릿하다고 호소했던 이전 정책 폐기
+//   - text-overflow: clip — ellipsis '...' 없음 (더보기 버튼이 명시적 신호)
+//   - contain X — GPU 레이어 분리 폐기 (timeline 의 많은 카드에 적용 시 스크롤 부담)
 // ---------------------------------------------------------------------
 .status__content.status__content--collapsed {
   display: -webkit-box;
@@ -24,41 +19,23 @@
   -webkit-line-clamp: 14;
   line-clamp: 14;
   overflow: hidden;
-  text-overflow: clip; // ellipsis (...) 제거 — 더보기 버튼이 명시적이므로 불필요
+  text-overflow: clip;
   position: relative;
-
-  // GPU 레이어 분리 — 저사양 안드로이드 스크롤 perf
-  contain: layout paint;
 }
 
-// ---------------------------------------------------------------------
-//  상세 / 타래 — 전문 노출 (max-height + mask 무력화)
-//  '.status--in-thread' 는 status.jsx 에서 rootId prop 있을 때 추가됨
-//  → status 상세 페이지의 ancestors / descendants 모두 해당
-// ---------------------------------------------------------------------
+// 상세 / 타래 (.status--in-thread) 에서는 collapsed 무력화 (전문 노출)
 .detailed-status .status__content,
 .detailed-status .status__content.status__content--collapsed,
 .status--in-thread .status__content,
 .status--in-thread .status__content.status__content--collapsed {
+  display: block;
   max-height: none;
-  mask-image: none;
-  -webkit-mask-image: none;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
   overflow: visible;
-  contain: none;
 }
 
-// 상세/타래에서는 '더보기' 버튼 자체를 숨김 (이미 전문 노출)
-// 더 구체적인 셀렉터로 specificity 보강 — base mastodon 룰을 확실히 이김
-.detailed-status .status__content__read-more-button,
-.status--in-thread .status__content__read-more-button,
-.detailed-status > .status__content__read-more-button,
-.status--in-thread > .status__content__read-more-button {
-  display: none !important;
-}
-
-// ---------------------------------------------------------------------
-//  '더보기' 버튼 디자인 — 페이드와 자연스럽게 연결
-// ---------------------------------------------------------------------
+// '더보기' 버튼 디자인 — 페이드 없이 본문 끝에 자연스럽게 표시
 .status__content__read-more-button {
   margin-top: 4px;
   padding: 6px 0;
@@ -75,12 +52,10 @@
   }
 }
 
-// ---------------------------------------------------------------------
-//  text-overflow ellipsis 제거 — multi-line 에서 무의미하고 가끔 어색
-// ---------------------------------------------------------------------
-.status__content,
-.reply-indicator__content {
-  text-overflow: clip;
+// 상세/타래에서는 '더보기' 버튼 숨김 (이미 전문 노출)
+.detailed-status .status__content__read-more-button,
+.status--in-thread .status__content__read-more-button {
+  display: none !important;
 }
 
 // ---------------------------------------------------------------------
@@ -93,162 +68,49 @@
 //  해결: home 타임라인 (rootId 없는 컨텍스트 = .status--in-thread 클래스 없음)
 //  에서는 --first-in-thread 의 border-top 을 제거. base border-bottom 만으로
 //  카드 구분 충분.
-//
-//  단, status 상세 페이지(detailed_status 의 thread)는 .status--in-thread
-//  가 함께 적용되며 그 안의 --in-thread 가 border-bottom 을 제거하므로
-//  --first-in-thread border-top 이 그곳에서는 필수 → :not() 으로 격리.
 // ---------------------------------------------------------------------
 .status--first-in-thread:not(.status--in-thread) {
   border-top: 0;
 }
 
 // ---------------------------------------------------------------------
-//  홈 타임라인 thread chain — Twitter 식 카드 merge
+//  홈 타임라인 chain merge — 직속 답글의 panel 묶음
 //
-//  접근:
-//   (1) Mastodon 기본 .status__line (vertical line + tick) 숨김
-//       — 카드 안쪽 element 와 충돌 없이 깔끔
-//   (2) chain 의 ancestor 카드 (다음에 reply 있음) 의 border-bottom 제거
-//       → 다음 reply 카드와 시각적으로 merge → 하나의 thread block 처럼 보임
-//   (3) `↩ Continued thread` prepend 캡션이 chain 관계 명시
+//  서버측 home_feed.rb 의 inject_direct_parents 가 답글의 직속 부모만 inject
+//  (BFS / chain compress 폐기). 직속 부모가 timeline 에 있으면 답글 바로 위에
+//  배치되어 두 카드가 sibling article 로 인접.
 //
-//  결과 (A→B1→B2 chain):
+//  깊은 chain (depth 2+) 의 grand-parent 는 inject 안 함 → 답글이 단독 카드.
+//  mastodon base 의 'ㅇㅇ님에게' prepend 가 컨텍스트 제공.
 //
-//   ┌─────────────────┐
-//   │  A (원글)        │
-//                      ← border-bottom: 0 (merge)
-//   │ ↩ Continued      │
-//   │  B1              │
-//                      ← border-bottom: 0 (merge)
-//   │ ↩ Continued      │
-//   │  B2 (last)       │
-//   └─────────────────┘  ← 정상 border-bottom (다음 카드와 분리)
+//  DOM 구조 (ScrollableList 의 article wrapping 기준):
+//   <article data-id="A"><div><div class="status__wrapper"><div class="status">A</div></div></div></article>
+//   <article data-id="B"><div><div class="status__wrapper"><div class="status status-reply">B</div></div></div></article>
 //
-//   Chain 전체가 하나의 통합 panel 처럼 보이고, 마지막 카드만 다음 카드와 분리됨.
+//  article 끼리만 sibling — .status / .status__wrapper 는 각자 article 안에 갇힘.
 // ---------------------------------------------------------------------
 
-// (1) 기본 .status__line 시각 요소 모두 숨김
+// (1) 기본 .status__line (vertical line + tick) 숨김 — chain compress indicator
+//     가 폐기되었고 직속 부모 inject 시각은 카드 인접 + border 0 만으로 충분
 .status:not(.status--in-thread) > .status__line {
   display: none;
 }
 
-// (2) ancestor 카드 (.status__line--full 자식 = 다음에 reply 가 옴) border-bottom 제거
-//     → 다음 reply 카드와 시각적으로 merge.
-//     reply 카드의 border-top 제거는 위 `.status--first-in-thread:not(...)` 룰이 처리.
+// (2) ancestor 카드 (.status__line--full 자식 = connectReply true = 직속 답글 다음)
+//     의 border-bottom 제거 — 다음 reply 카드와 panel 통합
 .status:not(.status--in-thread):has(> .status__line--full) {
   border-bottom: 0;
 }
 
-// ---------------------------------------------------------------------
-//  Twitter 식 chain 압축 indicator — "더 많은 답글 보기" 버튼
-//
-//  home_feed.rb 의 build_chain 이 깊은 chain (A → B1 → ... → B111) 을
-//  [A, B111] 로 압축 반환할 때, 두 카드 사이에 그려지는 작은 버튼.
-//  클릭하면 root status 상세 페이지로 이동하여 사용자가 전체 chain 확인.
-//
-//  시각: 가는 세로 thread line + "더 많은 답글 보기" 텍스트 — 카드 사이에
-//  자연스럽게 녹아들도록 직전/직후 카드의 border 를 제거하여 통합 panel 형태.
-// ---------------------------------------------------------------------
-.chain-collapse-indicator {
-  display: flex;
-  align-items: stretch; // 자식이 full-height 늘어나도록 — line 이 카드 사이를 끊김 없이 이어줌
-  gap: 12px;
-  width: 100%;
-  min-height: 40px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--color-text-secondary);
-  // <button> 은 user-agent stylesheet 가 system 폰트를 강제하므로 body 에 적용된
-  // Pretendard 가 상속되지 않음 → 명시적으로 inherit 시켜 body 의 폰트 스택
-  // (Pretendard Variable → system-ui → ...) 을 적용.
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease;
-
-  // 세로 thread line — indicator 의 본문 영역만 차지하여 root/reply 카드의
-  // border 영역을 침범하지 않도록 위/아래 4px 여백. status 카드의 avatar 중심에
-  // 가까운 좌측 위치(약 32-36px) 에 정렬.
-  &__line {
-    width: 2px;
-    margin-left: 32px;
-    margin-block: 4px;
-    background: var(--color-border-primary);
-    border-radius: 1px;
-    flex-shrink: 0;
-  }
-
-  &__label {
-    flex: 1;
-    padding: 12px 16px 12px 0;
-    align-self: center;
-  }
-
-  &:hover:not(:disabled),
-  &:focus-visible {
-    background: rgba(128, 128, 128, 0.06); // 4개 테마 모두에서 약하게 작동하는 hover trace
-    color: var(--color-text-primary);
-    outline: 0;
-
-    .chain-collapse-indicator__label {
-      text-decoration: underline;
-    }
-  }
-
-  // rootAcct 가 store 에 없을 때 — 클릭 무반응 silent fail 방지
-  &:disabled {
-    cursor: default;
-    opacity: 0.6;
-  }
-}
-
-// ---------------------------------------------------------------------
-//  Chain merge — <article> 기준 sibling 셀렉터
-//
-//   ⚠️ 중요: ScrollableList 가 각 status 를 <article> 로 감싸 렌더하므로 timeline
-//   의 실제 인접 sibling 은 <article> 끼리. .status 도, .status__wrapper 도,
-//   .chain-collapse-indicator 도 sibling 이 아님 (모두 자기 article 안에 갇힘).
-//
-//   DOM 구조:
-//   <div role="feed" class="item-list">
-//     <article data-id="A">
-//       <div tabindex="-1"> <!-- Hotkeys -->
-//         <div class="status__wrapper"><div class="status">A</div></div>
-//       </div>
-//     </article>
-//     <article data-id="C">                    <!-- chain compress reply 의 경우 -->
-//       <button class="chain-collapse-indicator" />  <!-- 같은 article 안 -->
-//       <div tabindex="-1">
-//         <div class="status__wrapper"><div class="status status-reply">C</div></div>
-//       </div>
-//     </article>
-//   </div>
-//
-//   따라서 chain merge 룰은 article 기준 sibling 으로만 작성 가능.
-// ---------------------------------------------------------------------
-
-// (3a) 답글 chain (직속/평행/chain compress 모두 통합) — 다음 article 안에 reply 가
-//      있으면 현재 article 안의 status 의 border-bottom 제거.
-//      home_feed.inject_ancestors 가 reply 의 직전 카드를 chain ancestor 로 정렬
-//      해 반환하므로 인접 article 이 무관한 카드일 가능성 극히 낮음 (95%+ 정확).
+// (3) 답글 chain merge — 다음 article 안에 .status-reply 있으면 현재 article 안
+//     status border-bottom 0. .status / .status__wrapper 가 sibling 이 아니므로
+//     article 기준으로만 매치 가능.
 article:has(+ article .status__wrapper > .status-reply:not(.status--in-thread))
   .status:not(.status--in-thread) {
   border-bottom: 0;
 }
 
-// (3b) chain compress indicator — 다음 article 안에 indicator 가 있으면 현재 article
-//      의 status 의 border-bottom 제거 (root 와 indicator panel 시각 연결).
-article:has(+ article .chain-collapse-indicator)
-  .status:not(.status--in-thread) {
-  border-bottom: 0;
-}
-
-// (3c) 모든 reply 의 자기 border-top 제거 — 위 article 의 status 와 통합 panel.
-//      first-in-thread 룰과 중복이지만 직속 답글 (first-in-thread X) case 도 포함
-//      하여 모든 답글이 위 카드와 묶이도록 일관성 보장.
+// (4) 모든 reply 의 border-top 제거 — 위 article 의 status 와 panel 통합
 .status__wrapper > .status-reply:not(.status--in-thread) {
   border-top: 0;
 }
@@ -258,32 +120,22 @@ article:has(+ article .chain-collapse-indicator)
 //
 //   상세 페이지는 ScrollableList 가 아닌 직접 렌더이므로 <article> wrapping 없음.
 //   실제 sibling = .status__wrapper 끼리 (또는 .detailed-status__wrapper 와).
-//
-//   사용자 시나리오 — A 원글 상세 조회 시:
-//     A (detailed-status) → B (A 답글) → B1 (B 답글)
-//     • A-B 사이: 보더 유지 (사용자 요구)
-//     • B-B1 사이: 보더 제거 (chain 통합)
-//
-//   기존 홈 룰들은 :not(.status--in-thread) 라 상세 페이지 답글에는 매치 안 됨.
-//   in-thread 전용 룰 추가.
 // ---------------------------------------------------------------------
 
-// (3d) 직속 답글 chain — .status__line--full 자식이 있으면 다음 카드가 자기 답글
-//      (B 가 B1 의 부모 case). B.border-bottom 0 → B-B1 사이 보더 X.
+// (5) 직속 답글 chain — .status__line--full 자식이 있으면 다음 카드가 자기 답글
+//     (B 가 B1 의 부모 case). B.border-bottom 0 → B-B1 사이 보더 X.
 .status.status--in-thread:has(> .status__line--full) {
   border-bottom: 0;
 }
 
-// (3e) 평행 답글 / 일반 chain — sibling .status__wrapper 안에 in-thread reply
-//      가 있으면 현재 wrapper 의 in-thread status border-bottom 0.
+// (6) 평행 답글 / 일반 chain — sibling .status__wrapper 안에 in-thread reply
+//     가 있으면 현재 wrapper 의 in-thread status border-bottom 0.
 .status__wrapper:has(+ .status__wrapper > .status-reply.status--in-thread)
   > .status.status--in-thread {
   border-bottom: 0;
 }
 
-// (3f) 상세 페이지 — detailed-status (원글) 와 첫 descendant 사이 border 제거.
-//      detailed-status 가 chain 의 시작 → descendants 와 통합 panel 시각.
-//      detailed-status__wrapper 의 다음 sibling 이 .status__wrapper (descendants) 일 때만 적용.
+// (7) 상세 페이지 — detailed-status (원글) 와 첫 descendant 사이 border 제거.
 .detailed-status__wrapper:has(+ .status__wrapper) > .detailed-status {
   border-bottom: 0;
 }
@@ -292,32 +144,198 @@ article:has(+ article .chain-collapse-indicator)
   border-top: 0;
 }
 
-// (3g) 상세 페이지 — 모든 in-thread reply 의 border-top 제거.
-//
-//   문제 케이스: A 에 답글 B, B2 평행 답글이 있을 때 [A(detailed), B, B2] 순서.
-//   B2.first-in-thread 가 true 가 되어 (connectToRoot true) base 의 border-top 1px
-//   가 적용 → B-B2 사이 보더 그어짐. (3f) 룰은 detailed-status 직속 다음 sibling
-//   만 매치하므로 두 번째+ descendant 는 매치 안 됨.
-//
-//   해결: 모든 status-reply.status--in-thread 의 border-top 0 — 평행 답글, 깊은
-//   chain, ancestors chain 까지 일관되게 통합 panel 시각.
+// (8) 상세 페이지 — 모든 in-thread reply 의 border-top 제거 (평행 답글 포함).
 .status.status--in-thread.status-reply {
   border-top: 0;
 }
 
 // ---------------------------------------------------------------------
+//  "이어지는 글타래 보기" link — Twitter 의 "Show this thread" 와 유사
+//
+//   답글 카드의 부모가 home timeline 에 없을 때 카드 아래에 작은 link 표시.
+//   클릭 시 답글 자체의 상세 페이지로 이동 → context API 가 ancestors 전체 표시.
+//
+//   시각: 카드 아래에 통합된 작은 link — 이전에 폐기한 chain-collapse-indicator
+//   (카드 사이에 분리된 button) 와 달리 답글 카드와 시각상 한 panel.
+// ---------------------------------------------------------------------
+.show-thread-link {
+  display: block;
+  width: 100%;
+  padding: 10px 16px 14px calc(16px + 44px + 12px); // status 의 avatar + gap 만큼 들여쓰기
+  border: 0;
+  background: transparent;
+  color: var(--color-text-brand);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+
+  // 카드와 통합되도록 — 직전 status 카드의 border-bottom 제거는 별도 룰
+  border-bottom: 1px solid var(--color-border-primary);
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(128, 128, 128, 0.06);
+    text-decoration: underline;
+    outline: 0;
+  }
+}
+
+// 답글 카드의 border-bottom 제거 — show-thread-link 와 시각 통합
+// (.status__wrapper 가 article 안에 있으므로 wrapper 의 다음 sibling 이 link 인지 검사)
+article:has(.show-thread-link) .status:not(.status--in-thread) {
+  border-bottom: 0;
+}
+
+// ---------------------------------------------------------------------
+//  DM 메뉴 (/conversations) 가독성 개선 — 트위터 메신저식
+//
+//   1. 참여자 이름 강조 — 본문보다 1px 큼, primary color, 500 weight
+//   2. DM 미리보기 2줄 ellipsis — 트위터 메신저식 짧은 preview
+//   3. unread 카드 배경 + 이름 bold 강조
+//   4. hover 배경 — mouse 사용자 클릭 가능 표시
+//   5. action bar 시각 약화 — opacity 0.6 default, hover/focus 시 1.0
+// ---------------------------------------------------------------------
+.conversation {
+  // (4) hover 배경 — 클릭 가능 시각
+  &:hover {
+    background: var(--color-bg-overlay-highlight);
+    cursor: pointer;
+  }
+
+  // (3) unread 카드 — 배경 강조 + 이름 bold
+  &.unread {
+    background: var(--color-bg-brand-softest);
+
+    .conversation__content__names {
+      font-weight: 700;
+    }
+  }
+
+  // (1) 참여자 이름 — 강조
+  &__content__names {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
+
+  // (2) DM 미리보기 — 2줄 ellipsis (홈 timeline 의 14줄 collapsed override)
+  .status__content {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    text-overflow: clip;
+    max-height: none;
+  }
+
+  // DM 미리보기 더보기 버튼 숨김 — 카드 클릭 = 대화 진입이 자연스러움
+  .status__content__read-more-button {
+    display: none;
+  }
+
+  // (5) action bar 시각 약화 — hover/focus 시 강조
+  .status__action-bar {
+    opacity: 0.6;
+    transition: opacity 0.12s ease;
+  }
+
+  &:hover .status__action-bar,
+  .status__action-bar:focus-within {
+    opacity: 1;
+  }
+}
+
+// ---------------------------------------------------------------------
+//  DM chain 의 prepend ('Private mention' 라벨 + mail 아이콘) — 첫 번째만 표시
+//
+//   사용자가 DM 메뉴 (conversation) 진입 후 상세 페이지에서 chain 전체 (ancestors +
+//   detailed-status + descendants) 가 표시될 때, 모든 카드에 'Private mention'
+//   prepend 가 반복 표시되어 시각 노이즈. chain root (가장 부모, DOM 의 첫 카드)
+//   에만 prepend 표시하고 나머지는 숨김.
+//
+//   .scrollable--flex 는 상세 페이지의 container (item-list scrollable scrollable--flex).
+//   첫 번째 직접 자식 외 모든 카드의 DM prepend 숨김:
+//    - .status-direct (status--in-thread DM 카드) 의 status__prepend
+//    - .detailed-status 의 status__prepend (visibility direct 일 때만 렌더되므로 안전)
+// ---------------------------------------------------------------------
+.scrollable--flex > *:not(:first-child) {
+  .status-direct .status__prepend,
+  .detailed-status .status__prepend {
+    display: none;
+  }
+}
+
+// ---------------------------------------------------------------------
+//  .status-direct 제거 — DM 메뉴 분리 후 타임라인 DM 시각 마커 불필요
+//
+//   업스트림 mastodon (components.scss) 와 twitter/_dm.scss 가 .status-direct 에
+//   주황 배경 + 좌측 보더(!important) 를 적용. DM 이 /conversations 메뉴로 완전
+//   분리된 정책상 home/notification 등에 DM 자체가 안 보이므로 시각 마커 의미 없음.
+//
+//   override !important 사용 — 업스트림이 !important 박았기 때문에 필수.
+//   .notification-direct, .notification__dm-badge 등 다른 DM 마커는 유지.
+// ---------------------------------------------------------------------
+.status-direct {
+  background-color: transparent !important;
+  border-inline-start: 0 !important;
+  border-left: 0 !important;
+}
+
+// ---------------------------------------------------------------------
+//  Compose-form 영역 폰트 계층 — 가독성 + 정보 우선순위 기준 재조정
+//
+//   기준: compose textarea (본문) = 16px (iOS Safari zoom 방지 필수치)
+//
+//   계층:
+//    1. 본인 정보 (navigation-bar) — 작성자 명확 시각
+//       • display name (이름, strong): 17px — 본문 + 1, 강조
+//       • acct (@handle):              14px — 보조 정보
+//    2. 답글 대상 (reply-indicator) — 참조 정보 (본인 본문 작성에 집중)
+//       • content (본문):              15px — 본인 본문보다 살짝 작게
+//       • display name (이름, strong): 14px — 작게
+//       • acct (@handle):              13px — 가장 작은 보조
+// ---------------------------------------------------------------------
+
+// 본인 정보 (navigation-bar)
+.compose-form .navigation-bar .account__display-name {
+  font-size: 17px;
+  line-height: 1.3;
+
+  .display-name__account {
+    font-size: 14px;
+  }
+}
+
+// 답글 대상 (reply-indicator)
+.reply-indicator__main {
+  padding-block: 6px;
+
+  .reply-indicator__content {
+    font-size: 15px;
+  }
+
+  .detailed-status__display-name strong {
+    font-size: 14px;
+  }
+
+  .detailed-status__display-name span {
+    font-size: 13px;
+  }
+}
+
+// ---------------------------------------------------------------------
 //  .status__line--full 의 카드 border 영역 침범 방지
 //
-//   base mastodon 의 .status__line 은 position: absolute. positioned ancestor
-//   가 .status__wrapper (position: relative) 이므로 line 의 height: 100% 가
-//   .status__wrapper 의 height = .status 의 outer height (border 포함) 까지.
-//   결과: line 이 .status 의 border-bottom 1px 영역을 침범하여 카드 사이
-//   border 를 "뚫고" 지나가는 시각이 됨.
+//   base mastodon 의 .status__line 은 position: absolute. positioned ancestor 가
+//   .status__wrapper (position: relative) 이라 line 의 height: 100% 가 .status 의
+//   outer height (border 포함) 까지 그어져서 border 영역 침범.
 //
-//   해결: .status 에 position: relative 부여 → line 의 base 가 .status (직속 부모)
-//   가 되어 height: 100% 가 .status 의 padding-box (border 미포함) 까지만.
-//   line 끝과 border 영역이 정확히 분리. chain merge 시 (border 0) 에도 line 이
-//   다음 카드까지 자연스럽게 닿음.
+//   해결: .status 에 position: relative 부여 → line 의 base 가 .status 가 되어
+//   height: 100% = padding-box (border 미포함) 까지만.
 // ---------------------------------------------------------------------
 .status {
   position: relative;

@@ -12,11 +12,9 @@ export { disconnectTimeline } from './timelines_typed';
 
 export const TIMELINE_UPDATE  = 'TIMELINE_UPDATE';
 export const TIMELINE_CLEAR   = 'TIMELINE_CLEAR';
-// Twitter 스타일 thread chain — 이미 timeline 안에 있는 ancestor 를 top 으로 이동
+// 직속 부모 inject — streaming 으로 도착한 답글의 직속 부모를 답글 위로 BUMP.
+// chain compress / 중간 prune 폐기 (이전 정책). 깊은 chain 추적 안 함.
 export const TIMELINE_BUMP_TO_TOP = 'TIMELINE_BUMP_TO_TOP';
-// Twitter 식 thread 압축 — 중간 답글을 timeline items/pendingItems 에서 제거.
-// status entity 자체는 store 에 유지하여 상세 페이지/알림 등 다른 참조처가 영향받지 않음.
-export const TIMELINE_PRUNE = 'TIMELINE_PRUNE';
 
 export const TIMELINE_EXPAND_REQUEST = 'TIMELINE_EXPAND_REQUEST';
 export const TIMELINE_EXPAND_SUCCESS = 'TIMELINE_EXPAND_SUCCESS';
@@ -44,15 +42,6 @@ export const loadPending = timeline => ({
   type: TIMELINE_LOAD_PENDING,
   timeline,
 });
-
-// Twitter 스타일 ancestor 인젝션 — 같은 ancestor 가 직전 N개 안에 있으면
-// 다시 prepend 하지 않음 (sliding window dedup). 서버측 HomeFeed.rb 의
-// ANCESTOR_DEDUP_WINDOW (5) 와 동일하게 유지.
-const STREAMING_ANCESTOR_DEDUP_WINDOW = 5;
-// chain walking 최대 깊이 — 서버 home_feed.rb 의 MAX_CHAIN_DEPTH 와 동일하게 유지.
-// 100+ 단계 chain 도 root 까지 walk 가능 (실무에서는 store 의 statuses 가 부족해
-// 일찍 멈추는 경우가 대부분이라 client 측 비용은 평상시 미미).
-const MAX_CHAIN_DEPTH = 200;
 
 export function updateTimeline(timeline, status, { accept = undefined, bogusQuotePolicy = false } = {}) {
   return async (dispatch, getState) => {
@@ -96,94 +85,27 @@ export function updateTimeline(timeline, status, { accept = undefined, bogusQuot
       dispatch(submitMarkers());
     }
 
-    // ─── 2단계: Twitter 식 thread 압축 ───
-    // 답글이 도착했을 때 (streaming 이든 사용자 본인 submitCompose 든)
-    // chain (A → B1 → B2 → ... → reply) 에서 root(A) 만 reply 위로 끌어오고,
-    // 중간 답글(B1, B2, ...) 은 timeline 에서 제거 → 결과 [A, reply].
-    // 서버측 HomeFeed.build_chain 의 [root, status] 압축과 동일 의도.
-    //
-    // 절차:
-    //   1. statuses 스토어를 거슬러 올라가며 chain id 수집 (in_reply_to_id 따라)
-    //      — 마지막에 발견된 ancestor 가 root, 나머지는 중간 답글
-    //   2. 중간 답글들은 TIMELINE_PRUNE 으로 timeline items 에서 제거
-    //      (status entity 는 store 에 유지 → 상세 페이지/알림 등 영향 없음)
-    //   3. root 만 TIMELINE_BUMP_TO_TOP 으로 items 의 top 으로 이동
-    //   4. chain walk 가 not-in-store ancestor 에서 멈췄으면 그것을 한 번 fetch.
-    //      fetch 응답이 chain root (in_reply_to_id 없음) 일 때만 timeline 추가.
-    //      중간 답글이면 추가하지 않음 (서버 압축 정책과 일치).
+    // ─── 2단계: 직속 부모만 BUMP (chain compress 폐기) ───
+    // streaming 으로 도착한 답글의 직속 부모 (in_reply_to_id) 가 store 에 있고
+    // home timeline 의 items 에 있으면 그것을 top 으로 이동 — 답글 바로 위에 위치.
+    // 깊은 chain 추적 / 중간 답글 prune / "더 많은 답글 보기" indicator 모두 폐기.
+    // 직속 부모가 없거나 store 에 없으면 답글 카드 자체의 'ㅇㅇ님에게' prepend 가
+    // 컨텍스트 제공 (mastodon base 동작).
     if (timeline === 'home' && status.in_reply_to_id) {
       const pendingItems = getState().getIn(['timelines', timeline, 'pendingItems'], ImmutableList());
       const isPendingMode = preferPendingItems || !pendingItems.isEmpty();
 
       if (!isPendingMode) {
-        const statuses = getState().get('statuses');
+        const parentId = status.in_reply_to_id;
+        const parentInStore = getState().getIn(['statuses', parentId]);
 
-        // (1) chain walk — innermost(직속 parent) 부터 위로, root 까지
-        const visited = new Set([status.id]);
-        let cursor = status.in_reply_to_id;
-        let depth = 0;
-        let rootId = null;
-        const middleIds = []; // chain 중간 답글 (root 가 아닌 ancestor)
-
-        while (cursor && !visited.has(cursor) && depth < MAX_CHAIN_DEPTH) {
-          visited.add(cursor);
-          const ancestorInStore = statuses.get(cursor);
-          if (!ancestorInStore) break; // 스토어에 없으면 chain walk 중단
-          // DM ancestor 방어 — 서버 layer 가 race condition 등으로 새어도
-          // 클라이언트가 추가 leak 차단. DM 은 home 에 절대 끌어올리지 않음.
-          if (ancestorInStore.get('visibility') === 'direct') break;
-
-          // 이전에 root 후보로 잡았던 id 가 새 ancestor 발견으로 중간 답글로 밀림
-          if (rootId !== null) {
-            middleIds.push(rootId);
-          }
-          rootId = cursor;
-          cursor = ancestorInStore.get('in_reply_to_id');
-          depth += 1;
-        }
-        // cursor 가 여전히 truthy → chain 이 not-in-store ancestor 에서 멈춤
-        // rootId 도 truthy 라면 시점상 잠정적 root (store 가 chain 끝까지 못 따라간 경우)
-
-        // (2) 중간 답글 prune — timeline items 에서만 제거 (status entity 는 유지)
-        if (middleIds.length > 0) {
-          dispatch({
-            type: TIMELINE_PRUNE,
-            timeline,
-            statusIds: middleIds,
-          });
-        }
-
-        // (3) root 만 top 으로 BUMP — reply 위에 chain root 만 표시
-        if (rootId) {
+        // DM 부모 방어 — race condition 등으로 새도 home 에 절대 끌어올리지 않음
+        if (parentInStore && parentInStore.get('visibility') !== 'direct') {
           dispatch({
             type: TIMELINE_BUMP_TO_TOP,
             timeline,
-            statusId: rootId,
+            statusId: parentId,
           });
-        }
-
-        // (4) chain walk 가 미해결 ancestor 에서 멈췄으면 그것 한 개 fetch.
-        //     fetch 응답이 chain root (in_reply_to_id 없음) 일 때만 추가.
-        //     중간 답글이면 timeline 노출 안 함 (서버 정책 [root, reply] 와 일치).
-        //     사용자 새로고침 시 서버측 inject_ancestors 가 root 까지 정확히 채움.
-        if (cursor && depth < MAX_CHAIN_DEPTH) {
-          try {
-            const response = await api().get(`/api/v1/statuses/${cursor}`);
-            const ancestor = response.data;
-            if (ancestor.visibility !== 'direct' && !ancestor.in_reply_to_id) {
-              // fetch 한 ancestor 가 chain root → timeline 에 prepend
-              dispatch(importFetchedStatus(ancestor, { bogusQuotePolicy }));
-              dispatch({
-                type: TIMELINE_UPDATE,
-                timeline,
-                status: ancestor,
-                usePendingItems: preferPendingItems,
-              });
-            }
-            // root 가 아니면 (중간 답글) timeline 노출 안 함 — Twitter 식 압축
-          } catch (err) {
-            // 가시성 없음 (404/403) — chain 압축 결과만 노출
-          }
         }
       }
     }
