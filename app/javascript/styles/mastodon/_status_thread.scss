@@ -19,12 +19,16 @@
 //   - mask-image (그라데이션 페이드) X — 사용자가 흐릿하다고 호소했던 이전 정책 폐기
 //   - text-overflow: clip — ellipsis '...' 없음 (더보기 버튼이 명시적 신호)
 //   - contain X — GPU 레이어 분리 폐기 (timeline 의 많은 카드에 적용 시 스크롤 부담)
+//   - max-height: none — base mastodon 의 `max-height: 22px * 15` 무력화. base 의
+//     px 단위 max-height 가 line 경계와 안 맞아 line-clamp 와 함께 작동 시 문장 중간
+//     에서 잘리는 현상 방지. line-clamp 만으로 라인 단위 정확히 자름.
 // ---------------------------------------------------------------------
 .status__content.status__content--collapsed {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 14;
   line-clamp: 14;
+  max-height: none;
   overflow: hidden;
   text-overflow: clip;
   position: relative;
@@ -273,21 +277,20 @@ article:has(.show-thread-link) .status:not(.status--in-thread) {
 }
 
 // ---------------------------------------------------------------------
-//  DM chain 의 prepend ('Private mention' 라벨 + mail 아이콘) — 첫 번째만 표시
+//  DM chain 의 prepend ('DM' 라벨 + mail 아이콘) — 맨 첫 번째(최상위)만 표시
 //
-//   사용자가 DM 메뉴 (conversation) 진입 후 상세 페이지에서 chain 전체 (ancestors +
-//   detailed-status + descendants) 가 표시될 때, 모든 카드에 'Private mention'
-//   prepend 가 반복 표시되어 시각 노이즈. chain root (가장 부모, DOM 의 첫 카드)
-//   에만 prepend 표시하고 나머지는 숨김.
+//   DM chain 상세 페이지에서 모든 카드에 'DM' prepend 가 반복 표시되어 시각 노이즈.
+//   chain root (가장 부모, DOM 의 첫 카드) 에만 표시하고 나머지는 숨김.
 //
-//   .scrollable--flex 는 상세 페이지의 container (item-list scrollable scrollable--flex).
-//   첫 번째 직접 자식 외 모든 카드의 DM prepend 숨김:
-//    - .status-direct (status--in-thread DM 카드) 의 status__prepend
-//    - .detailed-status 의 status__prepend (visibility direct 일 때만 렌더되므로 안전)
+//   selector 정확화:
+//    • prepend 는 .status__wrapper-direct 의 직접 자식 (status div 의 형제)
+//    • detailed-status 안의 prepend 는 .detailed-status 의 직접 자식
+//   이전 selector (.status-direct .status__prepend) 는 status div 의 자손 검사라
+//   매치 안 됐던 문제 해결.
 // ---------------------------------------------------------------------
 .scrollable--flex > *:not(:first-child) {
-  .status-direct .status__prepend,
-  .detailed-status .status__prepend {
+  .status__wrapper-direct > .status__prepend,
+  .detailed-status > .status__prepend {
     display: none;
   }
 }

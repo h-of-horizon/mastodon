@@ -6,7 +6,7 @@ import { usePendingItems as preferPendingItems, me } from 'mastodon/initial_stat
 
 import { importFetchedStatus, importFetchedStatuses } from './importer';
 import { submitMarkers } from './markers';
-import { timelineDelete } from './timelines_typed';
+import { timelineDelete, timelineDeleteStatus } from './timelines_typed';
 
 export { disconnectTimeline } from './timelines_typed';
 
@@ -43,46 +43,6 @@ export const loadPending = timeline => ({
   timeline,
 });
 
-// Chain walk 헬퍼 — store 의 statuses 따라 root 까지 추적, root + immediate-child 식별.
-// immediate-child = root 의 직속 답글 (root 의 다음 element). statusId 가 root 이면 immediate = statusId 자기.
-const findChainInfo = (statusId, storeStatuses, maxDepth = 50) => {
-  let cursor = statusId;
-  let previousCursor = null;
-  const visited = new Set();
-  let depth = 0;
-  while (cursor && !visited.has(cursor) && depth < maxDepth) {
-    visited.add(cursor);
-    const s = storeStatuses.get(cursor);
-    if (!s) return { rootId: cursor, immediateChildId: previousCursor || statusId };
-    const parentId = s.get('in_reply_to_id');
-    if (!parentId) return { rootId: cursor, immediateChildId: previousCursor || statusId };
-    previousCursor = cursor;
-    cursor = parentId;
-    depth += 1;
-  }
-  return { rootId: cursor, immediateChildId: previousCursor || statusId };
-};
-
-// Streaming 새 답글용 — status 자기는 store 에 없으므로 parentId 부터 walk.
-// previousCursor 초기값이 status 자기 (root 의 직속 답글 case).
-const findChainInfoFromParent = (parentId, currentId, storeStatuses, maxDepth = 50) => {
-  let cursor = parentId;
-  let previousCursor = currentId;
-  const visited = new Set([currentId]);
-  let depth = 0;
-  while (cursor && !visited.has(cursor) && depth < maxDepth) {
-    visited.add(cursor);
-    const s = storeStatuses.get(cursor);
-    if (!s) return { rootId: cursor, immediateChildId: previousCursor };
-    const nextParent = s.get('in_reply_to_id');
-    if (!nextParent) return { rootId: cursor, immediateChildId: previousCursor };
-    previousCursor = cursor;
-    cursor = nextParent;
-    depth += 1;
-  }
-  return { rootId: cursor, immediateChildId: previousCursor };
-};
-
 export function updateTimeline(timeline, status, { accept = undefined, bogusQuotePolicy = false } = {}) {
   return async (dispatch, getState) => {
     if (typeof accept === 'function' && !accept(status)) {
@@ -111,32 +71,38 @@ export function updateTimeline(timeline, status, { accept = undefined, bogusQuot
       }
     }
 
-    // 평행 답글 정리 — 트위터 식 "원글당 답글 chain 하나"
+    // 평행 답글 정리 — 트위터 식 "같은 부모의 답글은 하나만" + 본인 답글 우선
     //
-    // 검사: 새 답글의 chain root + immediate-child (root 의 직속 답글) 식별 후
-    //       items 의 다른 status 중 같은 root + 다른 immediate-child 가 있으면 평행 답글 → 무시.
+    // 정책:
+    //   • 다른 사람 답글: 같은 in_reply_to_id 의 답글이 timeline 에 이미 있으면 무시
+    //     (기존 답글 유지, 새 답글 dispatch 안 함)
+    //   • 본인 답글 (status.account.id === me): 같은 in_reply_to_id 의 timeline 답글
+    //     들을 모두 **제거** 한 뒤 본인 답글 추가. 본인 답글이 다른 답글보다 우선.
     //
-    // 예외: 본인 답글 (status.account.id === me) 은 항상 통과 — 사용자가 자기 답글
-    //       작성 후 본인 화면에 안 나타나는 어색한 UX 방지.
-    //
-    // 알고리즘: chain walk 으로 root 까지 따라감. depth 1 (직속 in_reply_to_id) 만 검사
-    //          하던 이전 단순 방식의 한계 (깊은 chain leaf 가 평행 답글로 분류 안 됨)
-    //          를 해결. store 의 statuses 따라 walk — 비용은 timeline 크기 × depth 정도라 미미.
-    if (timeline === 'home' && status.in_reply_to_id && status.account?.id !== me) {
+    // Self-thread 영향 없음: A→B→B1→B2 의 각 status 는 모두 다른 direct parent
+    //                       (B.parent=A, B1.parent=B, B2.parent=B1) → 모두 통과.
+    if (timeline === 'home' && status.in_reply_to_id) {
       const items = getState().getIn(['timelines', 'home', 'items'], ImmutableList());
       const storeStatuses = getState().get('statuses');
 
-      // 새 답글의 chain 정보 (store 에 없으므로 in_reply_to_id 부터 walk)
-      const newInfo = findChainInfoFromParent(status.in_reply_to_id, status.id, storeStatuses);
-
-      // items 의 각 status 의 chain 정보 비교 — 같은 root + 다른 immediate-child = 평행
-      const parallelExists = items.some(id => {
+      // 같은 in_reply_to_id 의 timeline 답글들 식별
+      const parallelIds = items.filter(id => {
         if (typeof id !== 'string' || id === status.id) return false;
-        const info = findChainInfo(id, storeStatuses);
-        return info && info.rootId === newInfo.rootId && info.immediateChildId !== newInfo.immediateChildId;
+        const s = storeStatuses.get(id);
+        return s && s.get('in_reply_to_id') === status.in_reply_to_id;
       });
 
-      if (parallelExists) return;
+      if (parallelIds.size > 0) {
+        if (status.account?.id === me) {
+          // 본인 답글 — 기존 평행 답글 모두 제거 (timeline.items 에서만, status entity 는 유지)
+          parallelIds.forEach(id => {
+            dispatch(timelineDeleteStatus({ statusId: id, timelineKey: timeline }));
+          });
+        } else {
+          // 다른 사람 답글 — 평행 답글 이미 있으면 무시
+          return;
+        }
+      }
     }
 
     // ─── 1단계: reply 본체를 timeline 의 top 에 추가 ───

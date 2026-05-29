@@ -89,25 +89,30 @@ class HomeFeed < Feed
 
     visible_ancestors = fetch_self_thread_ancestors(statuses)
 
-    # (2) 평행 답글 정리 — 같은 root + 다른 immediate-child = 평행 → newest 만
-    # statuses 가 newest-first 정렬 (default_scope 'recent') 이므로 first hit = newest.
-    seen_immediate_per_root = {}
+    # (2) 평행 답글 정리 — 같은 direct parent (in_reply_to_id) 의 답글 중 newest 만 유지
+    #
+    # 트위터 식 정확한 정합: chain 의 모든 level 에서 평행 답글 정리.
+    # 같은 in_reply_to_id 의 답글이 여러 개면 같은 부모의 평행 답글 → newest 만 유지.
+    #
+    # 이전 알고리즘 (root + immediate-child 비교) 의 한계:
+    #   • Chain 중간 노드 (root 가 아닌) 의 평행 답글이 immediate-child 가 같아서 다 유지됨
+    #   • 예: A → B → C1, A → B → C2 (B 의 두 답글 C1/C2 평행, 둘 다 chain=[A,B] immediate=B)
+    #
+    # 새 알고리즘 — direct parent 비교:
+    #   • C1.parent=B, C2.parent=B → 같은 parent → newest 만 유지 ✅
+    #   • Self-thread (A→B→B1→B2) 의 각 status 는 모두 다른 parent → 모두 유지 ✅
+    #
+    # statuses 가 newest-first 정렬 (default_scope 'recent') 이므로 첫 hit = newest.
+    seen_per_parent = {}
     filtered = statuses.select do |status|
-      chain = build_self_thread_chain(status, visible_ancestors)
-      # chain 비어 있음 = 답글 아니거나 부모 visible 안 함 → 그대로 유지
-      next true if chain.empty?
+      parent_id = status.in_reply_to_id
+      next true if parent_id.nil? # root status — 정리 대상 아님
 
-      root = chain.first
-      # immediate-child = root 의 직속 답글.
-      # chain.size > 1 이면 chain[1], 아니면 status 자기 (status 가 root 의 직속 답글)
-      immediate_id = chain.size > 1 ? chain[1].id : status.id
-
-      if seen_immediate_per_root.key?(root.id)
-        # 같은 root 이미 봄. immediate 가 같으면 (같은 chain 안 다른 status — self-thread 의
-        # 중간/leaf) 유지. 다르면 (평행 답글 — 다른 immediate-child) 제거.
-        seen_immediate_per_root[root.id] == immediate_id
+      if seen_per_parent.key?(parent_id)
+        # 같은 parent 이미 봄 — 평행 답글 → newest (이미 유지된 것) 만 두고 현재 제거
+        seen_per_parent[parent_id] == status.id
       else
-        seen_immediate_per_root[root.id] = immediate_id
+        seen_per_parent[parent_id] = status.id
         true
       end
     end
