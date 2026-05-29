@@ -19,8 +19,8 @@ import type { RootState } from 'mastodon/store';
 import { useAppDispatch, useAppSelector } from 'mastodon/store';
 
 import { Button } from './button';
+import { ChainCollapseIndicator } from './chain_collapse_indicator';
 import { IconButton } from './icon_button';
-import { ShowThreadLink } from './show_thread_link';
 import type { StatusHeaderRenderFn } from './status/header';
 import { StatusHeader } from './status/header';
 
@@ -378,31 +378,56 @@ export const StatusQuoteManager = (props: StatusQuoteManagerProps) => {
     return reblogId ? state.statuses.get(reblogId) : status;
   });
 
-  // Twitter 식 "Show this thread" link 표시 조건:
+  // Twitter X 식 "더 많은 답글 보기" indicator 표시 조건:
   //   • home timeline 일 때만 (contextType === 'home')
   //   • status 가 답글 (in_reply_to_id 있음)
-  //   • 직속 부모가 home timeline 의 items 에 없음 — 즉 home_feed.rb 의
-  //     self-thread 추적 / 직속 부모 inject 가 부모를 채우지 못한 상태
-  // 이런 경우 사용자가 답글의 컨텍스트를 보려면 상세 페이지로 이동해야 하므로
-  // 카드 아래에 link 표시.
-  const showThreadLink = useAppSelector((state) => {
-    if (props.contextType !== 'home') return false;
+  //   • 직접 부모가 home timeline 에 없음 = chain 의 중간 답글이 생략됨
+  //     (서버측 home_feed.rb 의 chain compress 결과 — root + leaf 만 inject)
+  //
+  // 표시 위치: leaf 카드 위 별도 cell (Twitter X 정합 — article 외부, 카드 사이).
+  // 클릭 시 chain root 의 상세 페이지로 이동:
+  //   • 사용자 시나리오 요구 "그 버튼 클릭 시 원글로 이동"
+  //   • Twitter X 의 실제 href="/i/status/{root_id}" 동작과 동일
+  const chainCollapseInfo = useAppSelector((state) => {
+    if (props.contextType !== 'home') return null;
     const currentStatus = state.statuses.get(props.id);
     const inReplyToId = currentStatus?.get('in_reply_to_id') as string | null;
-    if (!inReplyToId) return false;
+    if (!inReplyToId) return null;
+
     const items = state.timelines.getIn(['home', 'items']) ?? null;
-    if (!items) return false;
-    // items 는 ImmutableList<string> — includes 로 timeline 에 있는지 검사
-    return !(items as unknown as { includes: (id: string) => boolean }).includes(inReplyToId);
+    if (!items) return null;
+
+    const itemsList = items as unknown as {
+      includes: (id: string) => boolean;
+      indexOf: (id: string) => number;
+      get: (i: number) => unknown;
+    };
+
+    // 직접 부모가 timeline 에 있으면 chain compress 아님 (단순 직속 답글)
+    if (itemsList.includes(inReplyToId)) return null;
+
+    // 직접 부모가 timeline 에 없음 = chain compress 됨
+    // 자기 직전 timeline item 이 서버측에서 inject 한 chain root
+    const currentIdx = itemsList.indexOf(props.id);
+    if (currentIdx <= 0) return null;
+
+    const previousId = itemsList.get(currentIdx - 1);
+    if (typeof previousId !== 'string') return null;
+
+    return { rootId: previousId };
   });
 
   const quote = status?.get('quote') as QuoteMap | undefined;
 
-  const threadLink = showThreadLink ? <ShowThreadLink statusId={props.id} /> : null;
+  // Indicator 는 leaf 카드 직전에 배치 (article 외부, 카드 사이 별도 cell — Twitter X 정합)
+  const collapseIndicator = chainCollapseInfo ? (
+    <ChainCollapseIndicator rootId={chainCollapseInfo.rootId} />
+  ) : null;
 
   if (quote) {
     return (
       <>
+        {collapseIndicator}
         <StatusContainer {...props}>
           <QuotedStatus
             quote={quote}
@@ -410,15 +435,14 @@ export const StatusQuoteManager = (props: StatusQuoteManagerProps) => {
             contextType={props.contextType}
           />
         </StatusContainer>
-        {threadLink}
       </>
     );
   }
 
   return (
     <>
+      {collapseIndicator}
       <StatusContainer {...props} />
-      {threadLink}
     </>
   );
 };

@@ -2,19 +2,21 @@
 
 class HomeFeed < Feed
   # =====================================================================
-  #  Twitter 식 chain 처리 — self-thread 전체 inject + 다른 사람 chain 은 직속 부모만
+  #  Twitter X 식 chain compress — root + newest leaf 만 표시
   #
-  #  정책:
-  #   • Self-thread (사용자가 자기 답글로 만든 chain): root 까지 전체 inject.
-  #     트위터의 "사용자의 self-thread 는 한 panel" 동작과 일치.
-  #   • 다른 사람과의 chain (작성자가 다른 사용자의 글에 답글): 직속 부모만 inject.
-  #     그 위 grand-parent 는 추적 X. 답글 카드 아래에 "이어지는 글타래 보기" link
-  #     로 사용자가 상세 페이지로 이동 가능 (status_quoted.tsx 의 ShowThreadLink).
+  #  정책 (트위터 X 최신 동작 정합):
+  #   • 같은 chain root 의 모든 답글 중 newest leaf 하나만 timeline 표시
+  #     - A → B1 → B2 → ... → B100 → timeline 에 [A, B100] 만
+  #     - A → C (newer 평행 답글) → timeline 에 [A, C] 만 (B chain 모두 제거)
+  #     - chain 의 중간 답글 (B1 ~ B99) 모두 생략
+  #   • Root (A) 와 leaf (B100) 사이는 ChainCollapseIndicator ("더 많은 답글 보기")
+  #     로 시각적으로 묶임. 클릭 시 root 상세 페이지로 이동.
+  #   • Self-thread / 다른 사용자 mixed chain 무관 — 동일 정책 적용.
   #
-  #  BFS 알고리즘 (max_depth 50 안전 제한):
-  #   1. raw statuses 의 직속 부모 batch fetch
-  #   2. 각 부모가 자기 자식의 author 와 같은 (self-thread) 인 경우만 grand-parent fetch
-  #   3. 다른 author 면 chain 끝 — 더 이상 fetch X
+  #  알고리즘 (3 단계):
+  #   1. fetch_self_thread_ancestors — BFS 로 ancestor 전체 fetch
+  #   2. seen_per_root — 같은 chain root 의 답글 중 newest 만 유지, 나머지 + 자손 제거
+  #   3. chain compress — 각 답글의 chain root 만 inject (중간 ancestor 모두 생략)
   #
   #  DM 격리 정책 유지:
   #   (a) 답글이 DM 인 경우 home 노출 X (read-time 필터)
@@ -77,54 +79,64 @@ class HomeFeed < Feed
 
   private
 
-  # Twitter 식 chain inject — self-thread 는 전체, 다른 사람 chain 은 직속 부모만 +
-  # 같은 root 의 평행 답글은 newest 하나만 유지 (트위터의 "원글당 답글 chain 하나" 정책).
+  # Twitter X 식 chain compress + 평행 답글 정리
   #
   # 알고리즘:
   #   1. BFS — 각 답글의 직속 부모 fetch, 부모의 author 가 자식의 author 와 같으면
   #      (self-thread) 그 부모의 부모도 fetch. 다른 author 면 fetch 끝.
-  #   2. **평행 답글 정리** — 같은 chain root 의 직속 답글 (root 의 immediate-child)
-  #      이 다른 답글이면 평행 답글 → newest 하나만 유지, 나머지 제거.
-  #   3. 각 (filtered) raw status 의 chain build → ancestor 를 status 직전에 insert
+  #   2. **평행 답글 정리 (chain root 단위)** — 같은 chain root 의 답글 중 newest leaf
+  #      하나만 유지, 나머지 + chain 자손 모두 제거.
+  #   3. **chain compress** — 각 답글의 chain root 만 timeline 에 insert
+  #      (중간 ancestor 모두 생략 → 클라이언트가 ChainCollapseIndicator 로 시각화)
   def inject_ancestors(statuses)
     return statuses if statuses.empty?
 
     visible_ancestors = fetch_self_thread_ancestors(statuses)
 
-    # (2) 평행 답글 정리 — 같은 direct parent (in_reply_to_id) 의 답글 중 newest 만 유지 +
-    #     제거된 평행 답글의 chain 자손도 함께 제거 (재귀)
+    # (2) 평행 답글 정리 — 같은 chain root 의 답글 중 newest leaf 만 유지 +
+    #     제거된 답글의 chain 자손 재귀 제거 (chain 일관성)
     #
-    # 트위터 식 정확한 정합:
-    #   • 같은 parent 의 답글 중 newest 만 유지
-    #   • 제거된 답글의 chain 자손 (제거된 답글의 답글들) 도 함께 제거 — chain 일관성
+    # 트위터 X 식 정확한 정합:
+    #   • A → B1 → B2 → ... → B100 chain 에서 newest leaf (B100) 만 timeline 표시
+    #   • A → C (newer 평행 답글) 가 있으면 C 만 표시, B chain 모두 제거
+    #   • 같은 chain root 의 모든 답글 (self-thread 의 중간 답글 포함) 중 newest 하나만
     #
-    # 예: A → B(notice 본인) → B1, B2 + A → C(world) → C1, C2
-    #   1차 정리: B 유지, C 제거 (newest = B 가정)
-    #   2차 자손 제거: C 의 자손 C1, C2 도 제거 (C 가 timeline 에 없으니 C1/C2 가 단독 카드
-    #                                                되어 시각 불일관)
+    # 이전 algorithm (direct parent 비교) 의 한계:
+    #   • Chain 의 각 level 에서만 비교 → 다른 level 의 평행 답글 정리 X
+    #   • 예: A → B → B1, A → C → C1 둘 다 유지 (B, C 가 다른 parent A 의 평행이라
+    #     newest 만 유지하지만 B1/C1 chain 자손은 별도 처리)
     #
-    # statuses 가 newest-first 정렬 (default_scope 'recent') 이므로 첫 hit = newest.
+    # 새 algorithm (chain root 비교):
+    #   • 각 답글의 chain root 찾음 (find_chain_root walk up)
+    #   • 같은 root 의 모든 답글 중 newest 만 유지
+    #   • 제거된 답글의 chain 자손 재귀 제거 (preserved_ids 인 newest 는 보호)
 
-    # 1차 — 같은 parent 평행 답글 중 newest 만 유지 식별
-    seen_per_parent = {}
+    # 1차 — chain root 단위 평행 답글 정리
+    seen_per_root = {}
     removed_ids = Set.new
 
     statuses.each do |status|
-      parent_id = status.in_reply_to_id
-      next if parent_id.nil?
+      next if status.in_reply_to_id.nil? # root status — 정리 대상 X
 
-      if seen_per_parent.key?(parent_id)
-        removed_ids.add(status.id) if seen_per_parent[parent_id] != status.id
+      root = find_chain_root(status, visible_ancestors)
+      next if root.nil? || root.id == status.id # 자기가 root 면 정리 대상 X
+
+      if seen_per_root.key?(root.id)
+        removed_ids.add(status.id) if seen_per_root[root.id] != status.id
       else
-        seen_per_parent[parent_id] = status.id
+        seen_per_root[root.id] = status.id
       end
     end
 
-    # 2차 — 제거된 status 의 chain 자손 재귀 제거 (chain 일관성)
-    # fixed-point iteration: 더 이상 새로 제거할 자손이 없을 때까지 반복
+    preserved_ids = seen_per_root.values.to_set
+
+    # 2차 — 자손 재귀 제거 (preserved_ids 의 newest leaf 는 보호)
     loop do
       newly_removed = statuses.select do |s|
-        !removed_ids.include?(s.id) && s.in_reply_to_id && removed_ids.include?(s.in_reply_to_id)
+        !removed_ids.include?(s.id) &&
+          !preserved_ids.include?(s.id) &&
+          s.in_reply_to_id &&
+          removed_ids.include?(s.in_reply_to_id)
       end
       break if newly_removed.empty?
 
@@ -135,28 +147,42 @@ class HomeFeed < Feed
 
     return filtered if visible_ancestors.empty?
 
-    # (3) filtered statuses 의 chain inject
+    # (3) chain compress — 각 답글의 chain root 만 inject (중간 ancestor 모두 생략)
+    #
+    # 시나리오:
+    #   • A → B100 (raw 답글) → result = [A, B100]
+    #     B100 의 chain root = A. A 가 timeline 의 B100 직전에 inject.
+    #     B1 ~ B99 (중간) 모두 생략.
+    #   • A → C (직속 답글, root 의 immediate-child) → result = [A, C]
+    #     C 의 chain root = A. A 가 timeline 의 C 직전에 inject.
+    #     중간 ancestor 없음 (depth 1 chain).
+    #
+    # 클라이언트 시각:
+    #   • [A, leaf] 사이 거리 (A 가 leaf 의 직속 부모 아님) → ChainCollapseIndicator 표시
+    #   • [A, immediate-child] 인접 → 단순 thread line 만 (indicator 안 보임)
     result = []
     result_ids = Set.new
 
     filtered.each do |status|
-      chain = build_self_thread_chain(status, visible_ancestors)
+      if status.in_reply_to_id.nil?
+        # Root status — 그대로 추가
+        next if result_ids.include?(status.id)
 
-      chain.each do |ancestor|
-        next if result_ids.include?(ancestor.id)
-
-        status_idx = result.index { |s| s.id == status.id }
-        if status_idx
-          result.insert(status_idx, ancestor)
-        else
-          result << ancestor
-        end
-        result_ids.add(ancestor.id)
-      end
-
-      unless result_ids.include?(status.id)
         result << status
         result_ids.add(status.id)
+      else
+        root = find_chain_root(status, visible_ancestors)
+
+        # Chain root 가 있고 아직 result 에 없으면 status 직전에 insert
+        if root && !result_ids.include?(root.id)
+          result << root
+          result_ids.add(root.id)
+        end
+
+        unless result_ids.include?(status.id)
+          result << status
+          result_ids.add(status.id)
+        end
       end
     end
 
@@ -199,26 +225,29 @@ class HomeFeed < Feed
     visible_ancestors
   end
 
-  # Status 부터 self-thread chain 의 root 까지 (또는 다른 author 만나는 직속 부모까지) 거슬러 올라감.
-  # 반환: chronological 순서 [oldest_ancestor, ..., direct_parent] (status 자체는 미포함).
+  # Status 부터 chain 의 root 까지 walk up. visible_ancestors 에 없는 in_reply_to_id
+  # 만나면 거기서 stop (그 직전 status 가 root).
   #
-  # 종료 조건:
-  #   • 직속 부모가 visible_ancestors 에 없음 → stop
-  #   • 직속 부모의 author 가 자식의 author 와 다름 (non-self-thread) → 직속 부모만 chain 에 추가하고 stop
-  def build_self_thread_chain(status, visible_ancestors)
-    chain = []
+  # 반환: chain root status (= in_reply_to_id 가 null 이거나 visible_ancestors 에 없는 답글).
+  # status 자체가 root (in_reply_to_id null) 인 경우 status 그대로 반환.
+  #
+  # 안전 제한:
+  #   • visited set 으로 순환 참조 차단
+  #   • MAX_SELF_THREAD_DEPTH 안전 상한
+  def find_chain_root(status, visible_ancestors)
     current = status
+    visited = Set.new([status.id])
+    depth = 0
 
     while current.in_reply_to_id && (parent = visible_ancestors[current.in_reply_to_id])
-      chain.unshift(parent)
+      break if visited.include?(parent.id) || depth >= MAX_SELF_THREAD_DEPTH
 
-      # parent 가 자식과 다른 author 면 chain 의 root (또는 root 보다 위) → stop
-      break unless parent.account_id == current.account_id
-
+      visited.add(parent.id)
       current = parent
+      depth += 1
     end
 
-    chain
+    current
   end
 
   # ancestor 표시 가시성 — 한 군데서 일괄 결정

@@ -89,18 +89,22 @@
 }
 
 // ---------------------------------------------------------------------
-//  홈 타임라인 chain merge — 직속 답글의 panel 묶음
+//  홈 타임라인 chain merge — Twitter X 식 chain compress (root + leaf 만)
 //
-//  서버측 home_feed.rb 의 inject_direct_parents 가 답글의 직속 부모만 inject
-//  (BFS / chain compress 폐기). 직속 부모가 timeline 에 있으면 답글 바로 위에
-//  배치되어 두 카드가 sibling article 로 인접.
+//  서버측 home_feed.rb 의 inject_ancestors 가 각 답글의 chain root 만 inject
+//  (중간 ancestor 모두 생략). DOM 구조:
+//   • Root + immediate-child (depth 2 chain): A → B 인접
+//   • Root + non-immediate leaf (depth 3+): A → [더 많은 답글 보기] → B100
 //
-//  깊은 chain (depth 2+) 의 grand-parent 는 inject 안 함 → 답글이 단독 카드.
-//  mastodon base 의 'ㅇㅇ님에게' prepend 가 컨텍스트 제공.
+//  ChainCollapseIndicator (status_quoted.tsx) 가 답글 카드 위에 표시되어
+//  중간 답글 생략 시각화 + root 의 상세 페이지 이동 버튼.
 //
 //  DOM 구조 (ScrollableList 의 article wrapping 기준):
 //   <article data-id="A"><div><div class="status__wrapper"><div class="status">A</div></div></div></article>
-//   <article data-id="B"><div><div class="status__wrapper"><div class="status status-reply">B</div></div></div></article>
+//   <article data-id="B100"><div>
+//     <button class="chain-collapse-indicator">...</button>  <- 답글 카드 위에 indicator
+//     <div class="status__wrapper"><div class="status status-reply">B100</div></div>
+//   </div></article>
 //
 //  article 끼리만 sibling — .status / .status__wrapper 는 각자 article 안에 갇힘.
 // ---------------------------------------------------------------------
@@ -181,43 +185,98 @@ article + article .status__wrapper-reply > .status__prepend {
 }
 
 // ---------------------------------------------------------------------
-//  "이어지는 글타래 보기" link — Twitter 의 "Show this thread" 와 유사
+//  ChainCollapseIndicator — "더 많은 답글 보기" (Twitter X 정확 정합)
 //
-//   답글 카드의 부모가 home timeline 에 없을 때 카드 아래에 작은 link 표시.
-//   클릭 시 답글 자체의 상세 페이지로 이동 → context API 가 ancestors 전체 표시.
+//   서버측 home_feed.rb 의 chain compress 결과 timeline 에 root + leaf 만 inject.
+//   중간 답글이 생략된 경우, leaf 카드 위 별도 cell 로 indicator 표시.
 //
-//   시각: 카드 아래에 통합된 작은 link — 이전에 폐기한 chain-collapse-indicator
-//   (카드 사이에 분리된 button) 와 달리 답글 카드와 시각상 한 panel.
+//   시각 구성 (Twitter X 실제 DOM 정합):
+//    • Position: leaf 카드 직전, article 외부 (카드 사이 별도 cell)
+//    • Layout: flex row → [avatar column 위치의 점 3개] + [본문 컬럼의 텍스트]
+//    • 좌측: avatar column (gutter 16 + avatar 44 → 60px) 위치에 점 3개 vertical
+//    • 우측: brand color "더 많은 답글 보기", font-size 15px, line-height 24px
+//    • Border-top/bottom: 0 (자체 카드 아님, transparent spacer)
+//
+//   클릭 시 chain root 의 상세 페이지로 이동:
+//    • 사용자 시나리오 요구 "원글로 이동"
+//    • Twitter X 의 href="/i/status/{root_id}" 동작과 동일
 // ---------------------------------------------------------------------
-.show-thread-link {
-  display: block;
+.chain-collapse-indicator {
+  display: flex;
+  align-items: center;
   width: 100%;
-  padding: 10px 16px 14px calc(16px + 44px + 12px); // status 의 avatar + gap 만큼 들여쓰기
+  // Twitter 식 — 카드 사이 별도 cell. padding 만 있고 border 없음.
+  padding: 12px 16px;
   border: 0;
   background: transparent;
-  color: var(--color-text-brand);
   font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
   text-align: left;
   cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition: background 0.12s ease;
 
-  // 카드와 통합되도록 — 직전 status 카드의 border-bottom 제거는 별도 룰
-  border-bottom: 1px solid var(--color-border-primary);
+  &__dots {
+    // Avatar column 정렬 — status 의 avatar 위치 (16 padding + 44 avatar)
+    // 중심선 (16 + 22 = 38px) 에 점 가운데 배치.
+    // 자체 width = avatar 44px → 가운데 정렬 시 시각 일치.
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    width: 44px;
+    height: 18px;
+    margin-right: 12px;
+    flex-shrink: 0;
 
-  &:hover,
-  &:focus-visible {
-    background: rgba(128, 128, 128, 0.06);
-    text-decoration: underline;
+    > span {
+      display: block;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--color-text-secondary);
+    }
+  }
+
+  &__label {
+    color: var(--color-text-brand);
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 24px;
+    letter-spacing: -0.003em;
+  }
+
+  &:hover:not(:disabled),
+  &:focus-visible:not(:disabled) {
+    background: rgba(128, 128, 128, 0.04);
     outline: 0;
+
+    .chain-collapse-indicator__label {
+      text-decoration: underline;
+    }
+  }
+
+  &:disabled,
+  &[aria-disabled='true'] {
+    cursor: default;
+
+    .chain-collapse-indicator__label {
+      color: var(--color-text-secondary);
+    }
   }
 }
 
-// 답글 카드의 border-bottom 제거 — show-thread-link 와 시각 통합
-// (.status__wrapper 가 article 안에 있으므로 wrapper 의 다음 sibling 이 link 인지 검사)
-article:has(.show-thread-link) .status:not(.status--in-thread) {
+// indicator 위 root 카드의 border-bottom 제거 → indicator 와 시각 연속
+article:has(+ article .chain-collapse-indicator) .status:not(.status--in-thread) {
   border-bottom: 0;
+}
+
+// indicator 가 든 article (leaf) 의 reply 의 border-top 제거 → indicator 와 시각 연속
+article:has(.chain-collapse-indicator) .status__wrapper > .status-reply:not(.status--in-thread) {
+  border-top: 0;
+}
+
+// indicator 가 든 article 의 답글 prepend 숨김 — indicator 가 컨텍스트 제공
+article:has(.chain-collapse-indicator) .status__wrapper-reply > .status__prepend {
+  display: none;
 }
 
 // ---------------------------------------------------------------------
@@ -538,9 +597,17 @@ html .detailed-status__wrapper-direct {
     }
   }
 
-  .show-thread-link {
-    // avatar (44) + gap (12) + status padding (12) = 68 → 모바일에선 줄임
-    padding-left: calc(12px + 44px + 8px);
-    padding-right: 12px;
+  // ChainCollapseIndicator 모바일 — status padding 12 기준 정렬
+  .chain-collapse-indicator {
+    padding: 10px 12px;
+
+    &__dots {
+      margin-right: 8px;
+    }
+
+    &__label {
+      font-size: 14px;
+      line-height: 22px;
+    }
   }
 }
