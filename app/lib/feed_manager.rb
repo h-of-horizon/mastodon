@@ -473,11 +473,15 @@ class FeedManager
     return :filter if crutches[:blocked_by][status.account_id]
 
     if status.reply? && !status.in_reply_to_account_id.nil?
-      # 폐쇄형 인스턴스 정책 (Twitter 스타일): 모든 답글을 home 에 노출.
-      # 원본은 reply_to 가 미팔로우 + 나 아님 + 자기답글 아닐 때 filter 했지만,
-      # 답글마다 ancestor 가 같이 보이도록 하려면 답글 자체가 home 에 들어와야 함.
-      # ancestor 자동 인젝션은 HomeFeed#inject_ancestors 에서 처리.
-      should_filter = false
+      # 트위터 X 정합 답글 정책 — 다음 케이스 중 하나일 때만 home 에 표시:
+      #   1) 본인 작성 답글 (self-thread)
+      #   2) 답글 대상이 본인
+      #   3) 답글 대상이 본인이 팔로우한 사람
+      # 그 외 다른 사람들 간 답글 chain (본인과 무관한 conversation) 은 home 에서 제외.
+      # 이게 트위터 X 의 실제 동작 — "Following" timeline 에 답글이 거의 안 들어옴.
+      should_filter   = receiver_id != status.in_reply_to_account_id
+      should_filter &&= !crutches[:following][status.in_reply_to_account_id]
+      should_filter &&= receiver_id != status.account_id
     elsif status.reblog?                                                                                                         # Filter out a reblog
       should_filter   = crutches[:hiding_reblogs][status.account_id]                                                             # if the reblogger's reblogs are suppressed
       should_filter ||= crutches[:blocked_by][status.reblog.account_id]                                                          # or if the author of the reblogged status is blocking me
