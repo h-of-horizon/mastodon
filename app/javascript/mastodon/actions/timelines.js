@@ -94,10 +94,27 @@ export function updateTimeline(timeline, status, { accept = undefined, bogusQuot
 
       if (parallelIds.size > 0) {
         if (status.account?.id === me) {
-          // 본인 답글 — 기존 평행 답글 모두 제거 (timeline.items 에서만, status entity 는 유지)
+          // 본인 답글 — 시간 비교 후 본인 답글이 더 newer 일 때만 기존 답글 제거.
+          // 일반적으로 본인 답글이 작성 즉시 streaming 도착이라 newest 이지만,
+          // 서버 지연 / 다른 사람의 newer 답글이 먼저 도착한 경우 본인 답글을
+          // 강제 우선 처리하면 시간순 어색. created_at 비교로 정확한 시간순 보장.
+          const newStatusTime = new Date(status.created_at).getTime();
           parallelIds.forEach(id => {
-            dispatch(timelineDeleteStatus({ statusId: id, timelineKey: timeline }));
+            const existing = storeStatuses.get(id);
+            if (!existing) return;
+            const existingTime = new Date(existing.get('created_at')).getTime();
+            // 본인 답글이 같거나 더 newer 면 기존 제거. older 면 그대로 유지.
+            if (newStatusTime >= existingTime) {
+              dispatch(timelineDeleteStatus({ statusId: id, timelineKey: timeline }));
+            }
           });
+
+          // 본인 답글이 모든 기존 답글보다 older 면 추가 안 함 (시간순)
+          const allExistingNewer = parallelIds.every(id => {
+            const existing = storeStatuses.get(id);
+            return existing && new Date(existing.get('created_at')).getTime() > newStatusTime;
+          });
+          if (allExistingNewer) return;
         } else {
           // 다른 사람 답글 — 평행 답글 이미 있으면 무시
           return;

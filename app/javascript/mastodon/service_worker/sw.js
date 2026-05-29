@@ -1,14 +1,13 @@
 import { ExpirationPlugin } from 'workbox-expiration';
 import { registerRoute } from 'workbox-routing';
-import { CacheFirst } from 'workbox-strategies';
+import { CacheFirst, NetworkFirst } from 'workbox-strategies';
 
 import { handleNotificationClick, handlePush } from './web_push_notifications';
 
-// Cache version suffix — 변경 사항 배포 시 bump 하여 이전 캐시 자동 폐기.
-// sw.js 파일 변경 시에만 브라우저가 SW 갱신을 detect 하므로, 자산만 변경하면
-// 캐시 잔존 가능. 큰 변경 배포 시 이 버전을 올리면 새 cache namespace 생성 →
-// 이전 cache 자동 폐기.
-const CACHE_VERSION = 'v2';
+// Cache version — 큰 변경 배포 시 bump 하여 이전 캐시 자동 폐기.
+// 추가로 아래 root HTML NetworkFirst 룰이 매 페이지 로드 시 새 HTML fetch 시도하므로
+// 자산 변경이 자동 반영됨 → CACHE_VERSION manual bump 필요성 ↓.
+const CACHE_VERSION = 'v3';
 const CACHE_NAME_PREFIX = `mastodon-${CACHE_VERSION}-`;
 
 function openWebCache() {
@@ -54,6 +53,24 @@ registerRoute(
       new ExpirationPlugin({
         maxAgeSeconds: 7 * 24 * 60 * 60, // 1 week
         maxEntries: 256,
+      }),
+    ],
+  }),
+);
+
+// Root HTML (navigation 요청) — NetworkFirst 로 자동 갱신.
+// 자산이 변경되었을 때 새 HTML (새 manifest 의 새 hashed filename 포함) 을 매번
+// network 에서 fetch. network 실패 시에만 cache 사용 — 오프라인 fallback.
+// 이로써 CACHE_VERSION manual bump 없이도 자산 변경이 자동으로 사용자에게 반영됨.
+registerRoute(
+  ({ request }) => request.mode === 'navigate',
+  new NetworkFirst({
+    cacheName: `${CACHE_NAME_PREFIX}html`,
+    networkTimeoutSeconds: 3, // 3초 안에 네트워크 응답 없으면 cache fallback
+    plugins: [
+      new ExpirationPlugin({
+        maxAgeSeconds: 24 * 60 * 60, // 1 day
+        maxEntries: 5,
       }),
     ],
   }),

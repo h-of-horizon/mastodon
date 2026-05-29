@@ -22,7 +22,9 @@ class HomeFeed < Feed
   #   (c) ancestor 가 DM 이면 inject 안 함 (visible_ancestor? 에서 차단)
   # =====================================================================
 
-  MAX_SELF_THREAD_DEPTH = 50
+  # Self-thread BFS 최대 깊이 — 100+ 단계 chain 도 root 까지 fetch 가능.
+  # 200 단계 이상은 corrupted data / 순환참조 방어용 상한 (실무에서 chain 평균 1-5단계).
+  MAX_SELF_THREAD_DEPTH = 200
 
   def initialize(account)
     @account = account
@@ -89,33 +91,47 @@ class HomeFeed < Feed
 
     visible_ancestors = fetch_self_thread_ancestors(statuses)
 
-    # (2) 평행 답글 정리 — 같은 direct parent (in_reply_to_id) 의 답글 중 newest 만 유지
+    # (2) 평행 답글 정리 — 같은 direct parent (in_reply_to_id) 의 답글 중 newest 만 유지 +
+    #     제거된 평행 답글의 chain 자손도 함께 제거 (재귀)
     #
-    # 트위터 식 정확한 정합: chain 의 모든 level 에서 평행 답글 정리.
-    # 같은 in_reply_to_id 의 답글이 여러 개면 같은 부모의 평행 답글 → newest 만 유지.
+    # 트위터 식 정확한 정합:
+    #   • 같은 parent 의 답글 중 newest 만 유지
+    #   • 제거된 답글의 chain 자손 (제거된 답글의 답글들) 도 함께 제거 — chain 일관성
     #
-    # 이전 알고리즘 (root + immediate-child 비교) 의 한계:
-    #   • Chain 중간 노드 (root 가 아닌) 의 평행 답글이 immediate-child 가 같아서 다 유지됨
-    #   • 예: A → B → C1, A → B → C2 (B 의 두 답글 C1/C2 평행, 둘 다 chain=[A,B] immediate=B)
-    #
-    # 새 알고리즘 — direct parent 비교:
-    #   • C1.parent=B, C2.parent=B → 같은 parent → newest 만 유지 ✅
-    #   • Self-thread (A→B→B1→B2) 의 각 status 는 모두 다른 parent → 모두 유지 ✅
+    # 예: A → B(notice 본인) → B1, B2 + A → C(world) → C1, C2
+    #   1차 정리: B 유지, C 제거 (newest = B 가정)
+    #   2차 자손 제거: C 의 자손 C1, C2 도 제거 (C 가 timeline 에 없으니 C1/C2 가 단독 카드
+    #                                                되어 시각 불일관)
     #
     # statuses 가 newest-first 정렬 (default_scope 'recent') 이므로 첫 hit = newest.
+
+    # 1차 — 같은 parent 평행 답글 중 newest 만 유지 식별
     seen_per_parent = {}
-    filtered = statuses.select do |status|
+    removed_ids = Set.new
+
+    statuses.each do |status|
       parent_id = status.in_reply_to_id
-      next true if parent_id.nil? # root status — 정리 대상 아님
+      next if parent_id.nil?
 
       if seen_per_parent.key?(parent_id)
-        # 같은 parent 이미 봄 — 평행 답글 → newest (이미 유지된 것) 만 두고 현재 제거
-        seen_per_parent[parent_id] == status.id
+        removed_ids.add(status.id) if seen_per_parent[parent_id] != status.id
       else
         seen_per_parent[parent_id] = status.id
-        true
       end
     end
+
+    # 2차 — 제거된 status 의 chain 자손 재귀 제거 (chain 일관성)
+    # fixed-point iteration: 더 이상 새로 제거할 자손이 없을 때까지 반복
+    loop do
+      newly_removed = statuses.select do |s|
+        !removed_ids.include?(s.id) && s.in_reply_to_id && removed_ids.include?(s.in_reply_to_id)
+      end
+      break if newly_removed.empty?
+
+      newly_removed.each { |s| removed_ids.add(s.id) }
+    end
+
+    filtered = statuses.reject { |s| removed_ids.include?(s.id) }
 
     return filtered if visible_ancestors.empty?
 

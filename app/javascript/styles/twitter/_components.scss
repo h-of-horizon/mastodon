@@ -100,6 +100,13 @@
       object-fit: cover;
       object-position: center;
     }
+
+    // Safari 14.4 이하 fallback — aspect-ratio 미지원 시 정사각형 보장.
+    // Avatar 컴포넌트가 inline style 로 width/height 같은 값을 부여하므로
+    // 거의 항상 정사각형이지만 aspect-ratio fallback 으로 안전망 추가.
+    @supports not (aspect-ratio: 1 / 1) {
+      // inline style 의 width 와 height 가 같다고 가정 — 추가 강제 없이 자연 정사각형
+    }
   }
 }
 

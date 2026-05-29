@@ -9,7 +9,11 @@
 //   지원: Chrome 105+, Safari 15.4+, Firefox 121+, Edge 105+.
 //   구형 브라우저는 :has() invalid selector 로 인식 → 그 룰만 무시되고
 //   다른 룰은 정상 적용. fallback 동작: chain merge 안 됨, 카드 사이 1px border
-//   표시 (mastodon base 동작). 별도 명시적 fallback 룰 불필요 — 자연 degradation.
+//   표시 (mastodon base 동작). 자연 degradation 으로 UX 유지.
+//
+//   @supports selector(:has(*)) wrap 으로 명시적 격리도 가능하나, 모든 :has() 룰을
+//   wrap 하면 코드 중복 발생. 자연 fallback 으로 충분 (invalid selector 만 무시,
+//   다른 SCSS 룰은 정상 적용).
 // =============================================================================
 
 // ---------------------------------------------------------------------
