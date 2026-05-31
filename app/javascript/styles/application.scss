@@ -48,8 +48,8 @@
 //  Default 테마 배경 이미지 — 색상 구성 (어두움 / 밝음) 자동 분기
 //
 //   • mastodon/theme/index.scss 의 [data-color-scheme] 분기 활용:
-//     - data-color-scheme='dark' 또는 미지정 → /backgrounds/dark.jpg
-//     - data-color-scheme='light'             → /backgrounds/light.jpg
+//     - data-color-scheme='dark' 또는 미지정 → /backgrounds/dark.png
+//     - data-color-scheme='light'             → /backgrounds/light.png
 //   • 사용자 설정 페이지 (/settings/preferences/appearance) 의 "색상 구성"
 //     (자동/밝음/어두움) 에 따라 자동 토글됩니다.
 //
@@ -68,9 +68,9 @@ body {
 
 html:not([data-color-scheme]) body,
 [data-color-scheme='dark'] body {
-  background-image: url('/backgrounds/dark.jpg');
+  background-image: url('/backgrounds/dark.png');
 }
 
 [data-color-scheme='light'] body {
-  background-image: url('/backgrounds/light.jpg');
+  background-image: url('/backgrounds/light.png');
 }
