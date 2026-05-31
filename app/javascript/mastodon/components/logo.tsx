@@ -1,7 +1,5 @@
 import classNames from 'classnames';
 
-import logo from '@/images/logo.svg';
-
 export const WordmarkLogo: React.FC = () => (
   <svg viewBox='0 0 261 66' className='logo logo--wordmark' role='img'>
     <title>Mastodon</title>
@@ -20,6 +18,9 @@ export const IconLogo: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+// SymbolLogo 는 `<img>` 직접 — PNG 사용 (public/icon-logo.png).
+// `<img src={svgFile}>` 컨텍스트에서 SVG 안 외부 image href 가 일부 브라우저에서
+// 차단될 수 있어 PNG 직접 사용으로 우회 (logo--icon 클래스는 IconLogo 와 공유).
 export const SymbolLogo: React.FC = () => (
-  <img src={logo} alt='Mastodon' className='logo logo--icon' />
+  <img src='/icon-logo.png' alt='Mastodon' className='logo logo--icon' />
 );

@@ -179,9 +179,21 @@ article + article .status__wrapper-reply > .status__prepend {
   border-top: 0;
 }
 
-// (8) 상세 페이지 — 모든 in-thread reply 의 border-top 제거 (평행 답글 포함).
-.status.status--in-thread.status-reply {
+// (8) 상세 페이지 — in-thread reply 의 border-top 제거 (chain 내부 연속 시각).
+//     단, .status--first-in-thread 는 평행 chain 의 시작이므로 구분선으로 유지.
+.status.status--in-thread.status-reply:not(.status--first-in-thread) {
   border-top: 0;
+}
+
+// (9) 평행 chain 구분선 — A 에 B chain (B → B1) + C chain (C → C1, C2) 처럼
+//     여러 답글 chain 이 있을 때, 한 chain 의 끝 (B chain leaf) 과 다른 chain
+//     의 시작 (.status--first-in-thread, C) 사이에 명확한 구분선 표시.
+//
+//     mastodon base 가 first-in-thread 에 border-top 1px 적용하나, 우리 룰 (8)
+//     이 in-thread reply 모두 border-top 0 시키던 것을 :not() 으로 보호하고,
+//     여기서 명시적으로 1px 보더 + 시각 강조 (padding-top) 적용.
+.status.status--in-thread.status--first-in-thread {
+  border-top: 1px solid var(--color-border-primary);
 }
 
 // ---------------------------------------------------------------------
@@ -277,6 +289,24 @@ article:has(.chain-collapse-indicator) .status__wrapper > .status-reply:not(.sta
 // indicator 가 든 article 의 답글 prepend 숨김 — indicator 가 컨텍스트 제공
 article:has(.chain-collapse-indicator) .status__wrapper-reply > .status__prepend {
   display: none;
+}
+
+// Chain compress leaf 카드 (indicator 든 article 의 답글) — border-bottom 1px 명시.
+//
+// 이유: 트위터 X chain compress 정합으로 같은 root 의 newest leaf 하나만 timeline 에
+// 표시. 따라서 leaf 카드 다음 article 은 항상 무관한 새 chain (다른 root 또는 다른
+// 사용자의 글). 두 chain 사이 시각 구분선 필요.
+//
+// base mastodon 의 status border-bottom 1px 가 자연 적용되어야 하나, 다른 룰의
+// override 가능성 + 빌드 cache 안전 위해 명시적 1px 강제.
+//
+// 주의 — base 의 status border-bottom 0 시키는 룰들 (라인 120, 128) 의 selector 가
+// chain compress leaf 와 매치 X (status__line--full 없음 + 다음 article 이 root, reply X).
+// 따라서 본 룰은 자연 1px 와 동일하지만 명시적 보장.
+article:has(.chain-collapse-indicator)
+  .status__wrapper-reply
+  > .status-reply:not(.status--in-thread) {
+  border-bottom: 1px solid var(--color-border-primary);
 }
 
 // ---------------------------------------------------------------------
