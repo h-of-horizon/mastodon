@@ -80,3 +80,19 @@ aside[data-variant],
 aside[data-variant] > * {
   box-shadow: none !important;
 }
+
+// ---------------------------------------------------------------------
+//  columns-area--mobile 아래쪽 배경 뚫림 방지
+//
+//   문제:
+//    • .columns-area--mobile 의 데스크톱 padding-bottom 10px (base 룰)
+//    • content 가 viewport 보다 짧을 때 column 아래쪽 빈 공간
+//    • 그 영역에 body 의 배경 이미지가 그대로 보여 시각상 지저분
+//
+//   해결: columns-area--mobile 의 background-color 를 column 의 default
+//         색 (var(--color-bg-primary)) 으로 채워서 빈 공간도 동일 색.
+//         양 옆 빈 공간 (column 외부) 에는 영향 X — body 배경 이미지 그대로.
+// ---------------------------------------------------------------------
+.columns-area--mobile {
+  background-color: var(--color-bg-primary);
+}
