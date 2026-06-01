@@ -82,17 +82,14 @@ aside[data-variant] > * {
 }
 
 // ---------------------------------------------------------------------
-//  columns-area--mobile 아래쪽 배경 뚫림 방지
+//  columns-area__panels__main 아래쪽 배경 뚫림 방지
 //
-//   문제:
-//    • .columns-area--mobile 의 데스크톱 padding-bottom 10px (base 룰)
-//    • content 가 viewport 보다 짧을 때 column 아래쪽 빈 공간
-//    • 그 영역에 body 의 배경 이미지가 그대로 보여 시각상 지저분
+//   메인 컬럼 영역 (panels__main) 의 content 가 viewport 보다 짧을 때
+//   아래쪽 빈 공간에 body 의 배경 이미지가 그대로 노출. 시각상 지저분.
 //
-//   해결: columns-area--mobile 의 background-color 를 column 의 default
-//         색 (var(--color-bg-primary)) 으로 채워서 빈 공간도 동일 색.
-//         양 옆 빈 공간 (column 외부) 에는 영향 X — body 배경 이미지 그대로.
+//   해결: columns-area__panels__main 의 background-color 를 column 의
+//         default 색으로 채움. 양 옆 panels__pane 은 별도라 영향 X.
 // ---------------------------------------------------------------------
-.columns-area--mobile {
+.columns-area__panels__main {
   background-color: var(--color-bg-primary);
 }

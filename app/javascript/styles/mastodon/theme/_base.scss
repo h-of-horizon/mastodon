@@ -2,18 +2,20 @@
   --color-white: #fff;
   --color-black: #000;
 
-  // Grey
-  --color-grey-50: #f6f6f9;
-  --color-grey-100: #eeedf3;
-  --color-grey-200: #d7d6e1;
-  --color-grey-300: #b2b1c8;
-  --color-grey-400: #88a;
-  --color-grey-500: #67678e;
-  --color-grey-600: #535374;
-  --color-grey-700: #44445f;
-  --color-grey-800: #3a3a50;
-  --color-grey-900: #21212c;
-  --color-grey-950: #181820;
+  // Grey — 청록 (teal) 친화 grey scale (HSL ~193°, saturation 10-16%).
+  // 마스토돈 base 의 보라/blue hint (HSL 240°) → 우리 brand teal (HSL 193°) 친화로.
+  // lightness 단계는 base 와 동일하게 유지하여 contrast 비율 보존.
+  --color-grey-50: #f3f7f8;
+  --color-grey-100: #e9f0f2;
+  --color-grey-200: #d4dee1;
+  --color-grey-300: #b0c0c5;
+  --color-grey-400: #879fa5;
+  --color-grey-500: #65868e;
+  --color-grey-600: #556e73;
+  --color-grey-700: #465b5f;
+  --color-grey-800: #3c4d51;
+  --color-grey-900: #212b2d;
+  --color-grey-950: #1b2224;
 
   // Indigo
   --color-indigo-50: #f0f1ff;
