@@ -50,20 +50,6 @@
   box-shadow: none !important;
 }
 
-// ---------------------------------------------------------------------
-//  tabs-bar__wrapper 위 삐져나온 background 제거
-//
-//   base 룰 (components.scss line 3105-3107):
-//   @media (min-width: $no-gap-breakpoint) {
-//     border-top: 10px solid var(--color-bg-primary);
-//   }
-//   → 데스크톱에서 tabs-bar 위로 10px 만큼 bg-primary 색이 튀어나옴.
-//
-//   해결: border-top 0 강제 (모든 미디어쿼리 적용).
-// ---------------------------------------------------------------------
-.tabs-bar__wrapper {
-  border-top: 0 !important;
-}
 
 // ---------------------------------------------------------------------
 //  callout 하위 box-shadow 제거
@@ -92,4 +78,8 @@ aside[data-variant] > * {
 // ---------------------------------------------------------------------
 .columns-area__panels__main {
   background-color: var(--color-bg-primary);
+  // 양옆 panel (compose-panel, navigation-panel) 의 margin-top/bottom: 10px 과 일치
+  // 위/아래 10px 여백 → 배경 이미지가 자연스럽게 panel 위/아래로 살짝 보임
+  margin-top: 10px;
+  margin-bottom: 10px;
 }
