@@ -96,7 +96,7 @@ html:not([data-color-scheme]) body::before,
 
 [data-color-scheme='light'] body::before {
   background-image: url('/backgrounds/light.png');
-  filter: blur(2px) brightness(0.85);
+  filter: blur(2px) brightness(0.95);
 }
 
 // ---------------------------------------------------------------------
@@ -109,16 +109,12 @@ html:not([data-color-scheme]) body::before,
 //   admin.scss 보다 source order 뒤 → 우리 룰 우선.
 // ---------------------------------------------------------------------
 // ---------------------------------------------------------------------
-//  배경 (brightness 0.85, 약간 어두움) 과 column 의 톤 분리 강화
+//  Panel outline 정리 (default 테마만 적용)
 //
-//   문제: 배경 + column 톤이 비슷해서 column 경계 약함.
-//   해결: column / panel 에 brand color (teal-gray) 흔적의 미세한 border.
-//         pane__inner 는 제외 — 사용자 요청으로 box-shadow none 처리됨.
+//   이전 모든 panel 에 teal-gray outline 적용했으나 — 지저분 호소로 제거.
+//   compose-panel 도 명시적 box-shadow none (base 룰 안전 차단).
+//   배경 brightness 조정 (0.95 / 0.85) 으로 column 톤 분리 충분.
 // ---------------------------------------------------------------------
-.column,
-.compose-panel,
-.navigation-panel,
-.admin-wrapper .sidebar-wrapper,
-.admin-wrapper .content {
-  box-shadow: 0 0 0 1px rgba(101, 157, 173, 0.18);
+.compose-panel {
+  box-shadow: none !important;
 }

@@ -49,3 +49,34 @@
 .columns-area__panels__pane__inner {
   box-shadow: none !important;
 }
+
+// ---------------------------------------------------------------------
+//  tabs-bar__wrapper 위 삐져나온 background 제거
+//
+//   base 룰 (components.scss line 3105-3107):
+//   @media (min-width: $no-gap-breakpoint) {
+//     border-top: 10px solid var(--color-bg-primary);
+//   }
+//   → 데스크톱에서 tabs-bar 위로 10px 만큼 bg-primary 색이 튀어나옴.
+//
+//   해결: border-top 0 강제 (모든 미디어쿼리 적용).
+// ---------------------------------------------------------------------
+.tabs-bar__wrapper {
+  border-top: 0 !important;
+}
+
+// ---------------------------------------------------------------------
+//  callout 하위 box-shadow 제거
+//
+//   callout = 두 시스템 사용:
+//    • admin.scss 의 .callout (settings 페이지 안내 박스)
+//    • Callout 컴포넌트 (CSS module, <aside data-variant="..."> 형식)
+//
+//   직속 자식 (>) 만 대상 — 깊은 자식 (button:focus 등 focus ring) 영향 X.
+// ---------------------------------------------------------------------
+.callout,
+.callout > *,
+aside[data-variant],
+aside[data-variant] > * {
+  box-shadow: none !important;
+}

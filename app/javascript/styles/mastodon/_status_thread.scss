@@ -310,6 +310,16 @@ article:has(.chain-collapse-indicator)
 }
 
 // ---------------------------------------------------------------------
+//  Explanation 안내 메시지와 DM feed 사이 여백 — base 가 너무 붙어 있음
+//   .follow_requests-unlocked_explanation 클래스는 DM 페이지 / 팔로우 요청
+//   페이지 상단의 안내 메시지에 사용. 그 아래 feed 와 시각 분리 필요.
+// ---------------------------------------------------------------------
+.follow_requests-unlocked_explanation {
+  margin-bottom: 16px;
+  padding-bottom: 4px;
+}
+
+// ---------------------------------------------------------------------
 //  DM 메뉴 (/conversations) 가독성 개선 — 트위터 메신저식
 //
 //   1. 참여자 이름 강조 — 본문보다 1px 큼, primary color, 500 weight
