@@ -7,20 +7,18 @@ export const WordmarkLogo: React.FC = () => (
   </svg>
 );
 
+// IconLogo / SymbolLogo 모두 PNG 직접 (`<img src='/icon-logo.png'>`).
+// 이전 SVG embed (`<use href='#logo-symbol-icon'>` + symbol 안 image href) 의존
+// 제거 — 일부 브라우저/CSP 환경에서 SVG 안 외부 image 가 표시 안 되는 경우 우회.
+// 일관된 패턴 (img 직접) 으로 모든 logo--icon 사용처에서 PNG 그대로 표시.
 export const IconLogo: React.FC<{ className?: string }> = ({ className }) => (
-  <svg
-    viewBox='0 0 79 79'
+  <img
+    src='/icon-logo.png'
+    alt='Mastodon'
     className={classNames('logo logo--icon', className)}
-    role='img'
-  >
-    <title>Mastodon</title>
-    <use xlinkHref='#logo-symbol-icon' />
-  </svg>
+  />
 );
 
-// SymbolLogo 는 `<img>` 직접 — PNG 사용 (public/icon-logo.png).
-// `<img src={svgFile}>` 컨텍스트에서 SVG 안 외부 image href 가 일부 브라우저에서
-// 차단될 수 있어 PNG 직접 사용으로 우회 (logo--icon 클래스는 IconLogo 와 공유).
 export const SymbolLogo: React.FC = () => (
   <img src='/icon-logo.png' alt='Mastodon' className='logo logo--icon' />
 );
