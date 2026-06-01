@@ -95,3 +95,18 @@ html:not([data-color-scheme]) body::before,
   background-image: url('/backgrounds/light.png');
   filter: blur(6px) brightness(1.05);
 }
+
+// ---------------------------------------------------------------------
+//  Admin (설정) 페이지 sidebar logo 크기 조정
+//
+//   base 룰 (admin.scss): width/height 100px + margin 40px auto → 작음 + 여백 큼
+//   override: 더 큰 logo + 더 짧은 여백.
+//
+//   selector specificity = base 와 동등 (0,4,0), application.scss 안 inline 이라
+//   admin.scss 보다 source order 뒤 → 우리 룰 우선.
+// ---------------------------------------------------------------------
+.admin-wrapper .sidebar-wrapper .sidebar .logo {
+  width: 200px;
+  height: 200px;
+  margin: 8px auto;
+}
