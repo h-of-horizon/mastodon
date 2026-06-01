@@ -45,3 +45,4 @@
 @use 'twitter/media-modal' as twitter-media-modal; // 공유 (미디어 모달 라운드)
 @use 'mastodon/compose_cw' as compose-cw; // CW 셀렉트박스 (default 와 공통)
 @use 'mastodon/status_thread' as status-thread; // 타래/상세 전문 노출 (공통)
+@use 'mastodon/layout_extras' as layout-extras; // logo 크기/여백 + pane__inner 테두리 제거 (공통)

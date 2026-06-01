@@ -40,6 +40,9 @@
 // Status 본문 표시(타래/상세 전문 노출, 더보기 페이드) — 4개 테마 공유.
 @use 'mastodon/status_thread' as status-thread;
 
+// Layout extras (navigation/admin logo 크기 + pane__inner 테두리 제거) — 4개 테마 공유.
+@use 'mastodon/layout_extras' as layout-extras;
+
 // Default 테마 전용 UI 조정 (트위터 테마와 룩 통일) — avatar 원형/투명, action-bar 호흡.
 // 반드시 'mastodon/components' 이후에 위치하여 base 룰을 이김.
 @use 'mastodon/default_theme_extras' as default-theme-extras;
@@ -105,48 +108,17 @@ html:not([data-color-scheme]) body::before,
 //   selector specificity = base 와 동등 (0,4,0), application.scss 안 inline 이라
 //   admin.scss 보다 source order 뒤 → 우리 룰 우선.
 // ---------------------------------------------------------------------
-.admin-wrapper .sidebar-wrapper .sidebar .logo {
-  width: 200px;
-  height: 200px;
-  margin: 8px auto;
-}
-
 // ---------------------------------------------------------------------
-//  배경 (brightness 0.55, 거의 검정) 과 column 의 톤 분리 강화
+//  배경 (brightness 0.85, 약간 어두움) 과 column 의 톤 분리 강화
 //
-//   문제: 어두운 배경 + 어두운 column → 두 톤 비슷해서 column 경계 약함.
+//   문제: 배경 + column 톤이 비슷해서 column 경계 약함.
 //   해결: column / panel 에 brand color (teal-gray) 흔적의 미세한 border.
-//         배경 색은 mastodon base 그대로 유지 (사용자 panel 처리 X 요청 따름).
+//         pane__inner 는 제외 — 사용자 요청으로 box-shadow none 처리됨.
 // ---------------------------------------------------------------------
 .column,
 .compose-panel,
 .navigation-panel,
-.columns-area__panels__pane__inner,
 .admin-wrapper .sidebar-wrapper,
 .admin-wrapper .content {
   box-shadow: 0 0 0 1px rgba(101, 157, 173, 0.18);
-}
-
-// ---------------------------------------------------------------------
-//  navigation-panel logo 크기 + 여백 조정
-//
-//   base 룰 (components.scss):
-//    • .navigation-panel .logo → height: 30px (작음)
-//    • .navigation-panel__logo → margin-bottom: 12px
-//
-//   override:
-//    • logo 크기 약 1.7배 (30 → 52)
-//    • container 여백 축소 (margin-bottom 12 → 4, margin-top 0)
-//    • width: auto 유지 + object-fit: contain — 비율 보존 (이미지 안 깨짐)
-// ---------------------------------------------------------------------
-.navigation-panel .logo {
-  height: 52px;
-  width: auto;
-  object-fit: contain;
-}
-
-.navigation-panel__logo {
-  margin-top: 0;
-  margin-bottom: 4px;
-  padding: 0;
 }

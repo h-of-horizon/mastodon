@@ -1,0 +1,51 @@
+// =============================================================================
+//  Layout extras — 4개 테마 공유 (default + twitter-light/dark/dim)
+//
+//  navigation panel + admin sidebar 의 logo 크기/여백 + pane__inner 의 테두리
+//  제거 등 모든 테마 공통 layout 미세 조정.
+// =============================================================================
+
+// ---------------------------------------------------------------------
+//  navigation-panel logo 크기 + 여백 조정
+//
+//   base 룰 (components.scss):
+//    • .navigation-panel .logo → height: 30px (작음)
+//    • .navigation-panel__logo → margin-bottom: 12px
+//
+//   override:
+//    • logo 크기 약 1.7배 (30 → 52)
+//    • container 여백 축소 (margin-bottom 12 → 4, margin-top 0)
+//    • width: auto 유지 + object-fit: contain — 비율 보존 (이미지 안 깨짐)
+// ---------------------------------------------------------------------
+.navigation-panel .logo {
+  height: 52px;
+  width: auto;
+  object-fit: contain;
+}
+
+.navigation-panel__logo {
+  margin-top: 0;
+  margin-bottom: 4px;
+  padding: 0;
+}
+
+// ---------------------------------------------------------------------
+//  Admin (설정) 페이지 sidebar logo 크기 + 여백
+//   base 룰 (admin.scss): width/height 100px + margin 40px auto → 작음 + 여백 큼
+// ---------------------------------------------------------------------
+.admin-wrapper .sidebar-wrapper .sidebar .logo {
+  width: 200px;
+  height: 200px;
+  margin: 8px auto;
+}
+
+// ---------------------------------------------------------------------
+//  columns-area__panels__pane__inner 의 바깥 테두리(box-shadow) 제거
+//
+//   base 룰 (components.scss line 3427): box-shadow: var(--dropdown-shadow)
+//   → 우측 panel (trends / footer) 외곽에 그림자/테두리 표시.
+//   사용자 요청 — 깔끔 처리 위해 box-shadow none.
+// ---------------------------------------------------------------------
+.columns-area__panels__pane__inner {
+  box-shadow: none !important;
+}
