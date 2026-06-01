@@ -387,21 +387,34 @@ export const StatusQuoteManager = (props: StatusQuoteManagerProps) => {
   // 표시 위치: leaf 카드 위 별도 cell (Twitter X 정합 — article 외부, 카드 사이).
   // 클릭 시 chain root (또는 가장 가까운 ancestor) 의 상세 페이지로 이동.
   //
-  // 표시 조건 — 단순화된 룰 (스크롤 시 추가 fetch 로 chain 의 중간 답글이
-  // timeline 에 들어와도 indicator 유지):
-  //   • 직전 timeline item 이 자기의 직속 부모 (in_reply_to_id) 가 아닐 때 표시
-  //   • 즉 직속 답글이 아닌 모든 답글에 indicator + rootId = 직전 item
+  // 표시 조건 (timeline.items 와 무관 — 스크롤 안정):
+  //   • status 가 답글 (in_reply_to_id 있음)
+  //   • 직속 부모가 root 가 아님 (parent.in_reply_to_id 가 있음 = chain depth 2+)
+  //   → 즉 chain 의 중간/leaf 인 경우만 indicator 표시
   //
-  // 이전 룰 (`items.includes(inReplyToId)`) 의 문제:
-  //   스크롤로 추가 fetch 가 chain 의 중간 답글을 timeline 에 가져오면 leaf 의
-  //   in_reply_to_id 가 timeline 에 있게 되어 indicator 가 갑자기 사라짐.
-  //   직전 item 비교만으로 chain compress 시각 안정 유지.
+  // 이전 룰의 문제 (timeline.items 기반 검사):
+  //   스크롤 시 timeline.items 가 변경되면 indicator 가 동적으로 사라짐.
+  //
+  // 새 룰: status 자체의 in_reply_to chain depth 만 검사 — timeline 변경 무관 →
+  // indicator 시각 안정 유지.
   const chainCollapseInfo = useAppSelector((state) => {
     if (props.contextType !== 'home') return null;
     const currentStatus = state.statuses.get(props.id);
     const inReplyToId = currentStatus?.get('in_reply_to_id') as string | null;
     if (!inReplyToId) return null;
 
+    // 직속 부모 검사 — root (in_reply_to_id null) 이면 직속 답글, indicator X
+    const parentStatus = state.statuses.get(inReplyToId);
+    if (parentStatus) {
+      const parentInReplyTo = parentStatus.get('in_reply_to_id') as string | null;
+      if (!parentInReplyTo) {
+        return null;
+      }
+    }
+
+    // 직속 부모가 chain 중간 (depth 2+) → indicator 표시
+    // rootId = 자기 직전 timeline item (서버측 chain compress 가 inject 한 root
+    // 또는 가장 가까운 ancestor). 클릭 시 그 상세 페이지로 이동.
     const items = state.timelines.getIn(['home', 'items']) ?? null;
     if (!items) return null;
 
@@ -415,9 +428,6 @@ export const StatusQuoteManager = (props: StatusQuoteManagerProps) => {
 
     const previousId = itemsList.get(currentIdx - 1);
     if (typeof previousId !== 'string') return null;
-
-    // 직전 item 이 자기 직속 부모면 chain compress 아님 (단순 직속 답글)
-    if (inReplyToId === previousId) return null;
 
     return { rootId: previousId };
   });

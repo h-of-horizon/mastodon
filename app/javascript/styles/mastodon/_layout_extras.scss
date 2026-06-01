@@ -92,3 +92,17 @@ aside[data-variant] > * {
 .columns-area--mobile .column {
   background-color: var(--color-bg-primary);
 }
+
+// ---------------------------------------------------------------------
+//  tabs-bar__wrapper border + columns-area--mobile padding 제거
+//
+//   tabs-bar__wrapper border (base: border-top 10px) → 배경색 삐져나옴
+//   columns-area--mobile padding (base: padding 10px 0) → padding 영역 배경 가림
+// ---------------------------------------------------------------------
+.tabs-bar__wrapper {
+  border: 0 !important;
+}
+
+.columns-area--mobile {
+  padding: 0 !important;
+}
