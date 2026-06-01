@@ -50,84 +50,48 @@
 //   • mastodon/theme/index.scss 의 [data-color-scheme] 분기 활용:
 //     - data-color-scheme='dark' 또는 미지정 → /backgrounds/dark.png
 //     - data-color-scheme='light'             → /backgrounds/light.png
-//   • 사용자 설정 페이지 (/settings/preferences/appearance) 의 "색상 구성"
-//     (자동/밝음/어두움) 에 따라 자동 토글됩니다.
 //
-//   반복 방지 + 영역 전체 채움:
-//    • background-attachment: fixed (스크롤과 무관하게 고정)
-//    • background-size: cover (영역 전체 채움)
-//    • background-repeat: no-repeat (반복 방지)
-//    • html 도 같은 배경 (body 가 viewport 보다 작은 케이스 fallback)
-//    • !important 로 다른 룰의 override 방지
-//
-//   글씨 가독성 — column / panel 영역에 반투명 overlay + blur:
-//    • .column, .navigation-panel, .compose-panel 등에 반투명 배경
-//    • backdrop-filter: blur — 배경 이미지가 카드 뒤에서 부드럽게 흐림
-//    • 어두움 모드 → 검은 반투명, 밝음 모드 → 흰 반투명
+//   배경 자체에 blur + brightness 처리 (글씨 영역 panel 처리 X):
+//    • body::before pseudo element 가 배경 이미지 표시
+//    • CSS filter: blur + brightness 로 약한 흐림 + 약한 어둠 처리
+//    • z-index 매우 낮음 → 콘텐츠 뒤 위치
+//    • column / panel 들은 default 배경 색 유지 (별도 처리 X)
+//    • 데스크톱 양옆 빈 공간에서 흐려진 배경 이미지 보임
 // ---------------------------------------------------------------------
 
-// (1) 배경 이미지 — 반복 방지 + 전체 채움 (html, body 모두)
-html,
+// (1) body 자체 배경 제거 — ::before 에서 처리
 body {
-  background-attachment: fixed !important;
-  background-size: cover !important;
-  background-position: center center !important;
-  background-repeat: no-repeat !important;
+  background: none !important;
+  position: relative;
 }
 
-html:not([data-color-scheme]),
-html:not([data-color-scheme]) body,
-[data-color-scheme='dark'],
-[data-color-scheme='dark'] body {
+// (2) ::before pseudo element — 배경 이미지 + filter 효과
+//     position: fixed 로 스크롤과 무관하게 viewport 채움
+//     z-index 매우 낮음 → 모든 콘텐츠 뒤
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  z-index: -100;
+  pointer-events: none;
+  // 약한 blur (6px) + 약한 brightness 조정 — 글씨 영역 영향 X
+  // (이전 column 반투명 14px blur + 55% black 보다 훨씬 약함)
+}
+
+// (3) 색상 구성별 배경 이미지 + filter
+html:not([data-color-scheme]) body::before,
+[data-color-scheme='dark'] body::before {
   background-image: url('/backgrounds/dark.png');
+  filter: blur(6px) brightness(0.85);
 }
 
-[data-color-scheme='light'],
-[data-color-scheme='light'] body {
+[data-color-scheme='light'] body::before {
   background-image: url('/backgrounds/light.png');
-}
-
-// (2) 글씨 영역 반투명 overlay — column / panel / scrollable
-//     - 카드 뒤 배경 이미지가 blur 로 흐려져 글씨 가독성 확보
-//     - column 자체 + 자식 panel 들 모두 반투명
-//     - status 카드 등 자식 element 는 transparent (column 의 반투명 배경 활용)
-
-// 어두움 모드 (default)
-html:not([data-color-scheme]),
-[data-color-scheme='dark'] {
-  .column,
-  .navigation-panel,
-  .compose-panel,
-  .columns-area__panels__pane__inner,
-  .getting-started__wrapper,
-  .column-header,
-  .column-back-button {
-    background-color: rgba(0, 0, 0, 0.55) !important;
-    backdrop-filter: blur(14px) saturate(140%);
-    -webkit-backdrop-filter: blur(14px) saturate(140%);
-  }
-
-  // status 카드 등은 column 의 반투명 활용 위해 transparent
-  .scrollable {
-    background-color: transparent !important;
-  }
-}
-
-// 밝음 모드
-[data-color-scheme='light'] {
-  .column,
-  .navigation-panel,
-  .compose-panel,
-  .columns-area__panels__pane__inner,
-  .getting-started__wrapper,
-  .column-header,
-  .column-back-button {
-    background-color: rgba(255, 255, 255, 0.7) !important;
-    backdrop-filter: blur(14px) saturate(140%);
-    -webkit-backdrop-filter: blur(14px) saturate(140%);
-  }
-
-  .scrollable {
-    background-color: transparent !important;
-  }
+  filter: blur(6px) brightness(1.05);
 }
