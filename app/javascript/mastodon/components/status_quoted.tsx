@@ -385,9 +385,17 @@ export const StatusQuoteManager = (props: StatusQuoteManagerProps) => {
   //     (서버측 home_feed.rb 의 chain compress 결과 — root + leaf 만 inject)
   //
   // 표시 위치: leaf 카드 위 별도 cell (Twitter X 정합 — article 외부, 카드 사이).
-  // 클릭 시 chain root 의 상세 페이지로 이동:
-  //   • 사용자 시나리오 요구 "그 버튼 클릭 시 원글로 이동"
-  //   • Twitter X 의 실제 href="/i/status/{root_id}" 동작과 동일
+  // 클릭 시 chain root (또는 가장 가까운 ancestor) 의 상세 페이지로 이동.
+  //
+  // 표시 조건 — 단순화된 룰 (스크롤 시 추가 fetch 로 chain 의 중간 답글이
+  // timeline 에 들어와도 indicator 유지):
+  //   • 직전 timeline item 이 자기의 직속 부모 (in_reply_to_id) 가 아닐 때 표시
+  //   • 즉 직속 답글이 아닌 모든 답글에 indicator + rootId = 직전 item
+  //
+  // 이전 룰 (`items.includes(inReplyToId)`) 의 문제:
+  //   스크롤로 추가 fetch 가 chain 의 중간 답글을 timeline 에 가져오면 leaf 의
+  //   in_reply_to_id 가 timeline 에 있게 되어 indicator 가 갑자기 사라짐.
+  //   직전 item 비교만으로 chain compress 시각 안정 유지.
   const chainCollapseInfo = useAppSelector((state) => {
     if (props.contextType !== 'home') return null;
     const currentStatus = state.statuses.get(props.id);
@@ -398,21 +406,18 @@ export const StatusQuoteManager = (props: StatusQuoteManagerProps) => {
     if (!items) return null;
 
     const itemsList = items as unknown as {
-      includes: (id: string) => boolean;
       indexOf: (id: string) => number;
       get: (i: number) => unknown;
     };
 
-    // 직접 부모가 timeline 에 있으면 chain compress 아님 (단순 직속 답글)
-    if (itemsList.includes(inReplyToId)) return null;
-
-    // 직접 부모가 timeline 에 없음 = chain compress 됨
-    // 자기 직전 timeline item 이 서버측에서 inject 한 chain root
     const currentIdx = itemsList.indexOf(props.id);
     if (currentIdx <= 0) return null;
 
     const previousId = itemsList.get(currentIdx - 1);
     if (typeof previousId !== 'string') return null;
+
+    // 직전 item 이 자기 직속 부모면 chain compress 아님 (단순 직속 답글)
+    if (inReplyToId === previousId) return null;
 
     return { rootId: previousId };
   });
